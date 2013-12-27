@@ -1,0 +1,64 @@
+OASISFormat: 0.4
+OCamlVersion: >= 4.01.0
+Name: rxocaml
+Version: 0.1
+LicenseFile: LICENSE
+License: MIT
+BuildType: ocamlbuild (0.4)
+Authors: Alessandro Strada
+Maintainers: Alessandro Strada <alessandro.strada@gmail.com>
+Copyrights: (C) 2013 Alessandro Strada
+#Homepage: http://rxocaml.forge.ocamlcore.org
+Plugins: META (0.4)
+BuildTools: ocamlbuild
+
+Synopsis: An OCaml implementation of RX Observables.
+
+Description:
+  RxOCaml is an OCaml implementation of Rx Observables
+  (https://rx.codeplex.com/).
+
+# Flags
+Flag all
+  Description: Build all
+  Default: false
+
+# Libraries
+Library "rxocaml"
+  Path: src
+  Modules:
+    Rx
+  BuildDepends: lwt, threads
+  XMETADescription: Reactive Extensions (Rx) library in OCaml
+
+# Documentation
+Document "rxocaml"
+  Title: API reference for Reactive Extensions (Rx)
+  Type: ocamlbuild (0.4)
+  InstallDir: $htmldir/html
+  Install: false
+  DataFiles: doc/style.css
+  BuildTools+: ocamldoc
+  XOCamlbuildPath: src/
+  XOCamlbuildLibraries: rxocaml
+
+# Tests
+Executable "test_suite"
+  Build$: flag(tests) || flag(all)
+  Path: tests
+  Install: false
+  MainIs: testSuite.ml
+  BuildDepends: oUnit, rxocaml
+
+Test core
+  Run$: flag(tests) || flag(all)
+  Command: $test_suite
+  TestTools: test_suite
+
+# VCS
+SourceRepository head
+  Type: git
+  Location: https://github.com/astrada/rxocaml.git
+  Browser: https://github.com/astrada/rxocaml
+  Branch: master
+
