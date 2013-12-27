@@ -16,7 +16,51 @@ module Observer = struct
       on_next = 
     (on_next, on_error, on_completed)
 
-  module Checked = struct
+  module ObserverBase = struct
+    (* Original implementation:
+     * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/ObserverBase.cs
+     *)
+    type t = {
+      mutable is_stopped: bool;
+      mutex: Mutex.t
+    }
+
+    let create (on_next, on_error, on_completed) =
+      let observer_state = {
+        is_stopped = false;
+        mutex = Mutex.create ();
+      } in
+      let synchronize thunk =
+        BatMutex.synchronize ~lock:observer_state.mutex thunk () in
+      let on_next' x =
+        if not observer_state.is_stopped then on_next x
+      in
+      let stop () =
+        synchronize (
+          fun () ->
+            if not observer_state.is_stopped then begin
+              observer_state.is_stopped <- true;
+              true
+            end else false
+        ) in
+      let on_error' e =
+        let was_running = stop () in
+        if was_running then on_error e
+      in
+      let on_completed' () =
+        let was_running = stop () in
+        if was_running then on_completed ()
+      in
+      (on_next', on_error', on_completed')
+
+  end
+
+  module CheckedObserver = struct
+    (* In the original implementation, synchronization for the observer state
+     * is obtained through CAS (compare-and-swap) primitives, but in OCaml we
+     * don't have a standard/portable CAS primitive, so I'm using a mutex.
+     * (see https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/Internal/CheckedObserver.cs)
+     *)
     type state = Idle | Busy | Done
     type t = {
       mutable state: state;
@@ -26,12 +70,12 @@ module Observer = struct
     let create (on_next, on_error, on_completed) =
       let observer_state = {
         state = Idle;
-        mutex = Mutex.create();
+        mutex = Mutex.create ();
       } in
-      let with_lock thunk =
-        Utils.with_lock observer_state.mutex thunk in
+      let synchronize thunk =
+        BatMutex.synchronize ~lock:observer_state.mutex thunk () in
       let check_access () =
-        with_lock
+        synchronize
           (fun () ->
             match observer_state.state with
             | Idle ->
@@ -47,7 +91,7 @@ module Observer = struct
         Utils.try_finally
           thunk
           (fun () ->
-            with_lock (fun () -> observer_state.state <- new_state)
+            synchronize (fun () -> observer_state.state <- new_state)
           )
       in
       let on_next' x = wrap_action (fun () -> on_next x) Idle in
@@ -57,7 +101,40 @@ module Observer = struct
 
   end
 
-  let checked observer = Checked.create observer
+  let checked observer = CheckedObserver.create observer
+
+  module SynchronizedObserver = struct
+    (* Original implementation:
+     * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/Internal/SynchronizedObserver.cs
+     *)
+    let create (on_next, on_error, on_completed) =
+      let mutex = BatRMutex.create () in
+      let on_next' x = BatRMutex.synchronize ~lock:mutex on_next x in
+      let on_error' e = BatRMutex.synchronize ~lock:mutex on_error e in
+      let on_completed' () =
+        BatRMutex.synchronize ~lock:mutex on_completed ()
+      in
+      (on_next', on_error', on_completed')
+
+  end
+
+  let synchronize observer = SynchronizedObserver.create observer
+
+  module AsyncLockObserver = struct
+    (* Original implementation:
+     * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/Internal/AsyncLockObserver.cs
+     *)
+    let create (on_next, on_error, on_completed) =
+      let async_lock = AsyncLock.create () in
+      let wrap_action thunk = AsyncLock.wait async_lock thunk in
+      let on_next' x = wrap_action (fun () -> on_next x) in
+      let on_error' e = wrap_action (fun () -> on_error e) in
+      let on_completed' () = wrap_action (fun () -> on_completed ()) in
+      ObserverBase.create (on_next', on_error', on_completed')
+
+  end
+
+  let synchronize_async_lock observer = AsyncLockObserver.create observer
 
 end
 

@@ -28,7 +28,7 @@ Library "rxocaml"
   Path: src
   Modules:
     Rx
-  BuildDepends: lwt, threads
+  BuildDepends: lwt, batteries, threads
   XMETADescription: Reactive Extensions (Rx) library in OCaml
 
 # Documentation

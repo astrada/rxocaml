@@ -51,5 +51,9 @@ module Observer : sig
 
   val checked : 'a observer -> 'a observer
 
+  val synchronize : 'a observer -> 'a observer
+
+  val synchronize_async_lock : 'a observer -> 'a observer
+
 end
 

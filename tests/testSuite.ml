@@ -1,7 +1,7 @@
 open OUnit2
 
 let tests =
-  [TestRx.suite;
+  [TestObserver.suite;
   ]
 
 let build_suite () =

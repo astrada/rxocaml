@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 061bcde506f06df515c0dce0d24f93c6)
+# DO NOT EDIT (digest: 98c697bfe24309271c16b3ae9de1a40d)
 version = "0.1"
 description = "Reactive Extensions (Rx) library in OCaml"
-requires = "lwt threads"
+requires = "lwt batteries threads"
 archive(byte) = "rxocaml.cma"
 archive(byte, plugin) = "rxocaml.cma"
 archive(native) = "rxocaml.cmxa"
