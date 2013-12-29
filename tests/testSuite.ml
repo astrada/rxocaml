@@ -2,6 +2,8 @@ open OUnit2
 
 let tests =
   [TestObserver.suite;
+   TestAsyncLock.suite;
+   TestSubscription.suite;
   ]
 
 let build_suite () =

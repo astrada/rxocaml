@@ -4,7 +4,7 @@ let test_create_on_next _ =
   let next = ref false in
   let observer : int Rx.observer =
     Rx.Observer.create (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, _, on_completed) = observer in
+  let (on_completed, _, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   on_completed ()
@@ -14,7 +14,7 @@ let test_create_on_next_has_errors _ =
   let next = ref false in
   let observer : int Rx.observer =
     Rx.Observer.create (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, on_error, _) = observer in
+  let (_, on_error, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   try
@@ -29,7 +29,7 @@ let test_create_on_next_on_completed _ =
   let observer = Rx.Observer.create
     ~on_completed:(fun () -> completed := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, _, on_completed) = observer in
+  let (on_completed, _, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !completed;
@@ -43,7 +43,7 @@ let test_create_on_next_on_completed_has_errors _ =
   let observer = Rx.Observer.create
     ~on_completed:(fun () -> completed := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, on_error, on_completed) = observer in
+  let (_, on_error, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !completed;
@@ -62,7 +62,7 @@ let test_create_on_next_on_error _ =
   let observer = Rx.Observer.create
     ~on_error:(fun e -> assert_equal failure e; error := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, on_error, _) = observer in
+  let (_, on_error, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !error;
@@ -76,7 +76,7 @@ let test_create_on_next_on_error_hit_completed _ =
   let observer = Rx.Observer.create
     ~on_error:(fun e -> assert_equal failure e; error := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, _, on_completed) = observer in
+  let (on_completed, _, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !error;
@@ -92,7 +92,7 @@ let test_create_on_next_on_error_on_completed_1 _ =
     ~on_error:(fun e -> assert_equal failure e; error := true)
     ~on_completed:(fun () -> completed := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, _, on_completed) = observer in
+  let (on_completed, _, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !error;
@@ -110,7 +110,7 @@ let test_create_on_next_on_error_on_completed_2 _ =
     ~on_error:(fun e -> assert_equal failure e; error := true)
     ~on_completed:(fun () -> completed := true)
     (fun x -> assert_equal 42 x; next := true) in
-  let (on_next, on_error, _) = observer in
+  let (_, on_error, on_next) = observer in
   on_next 42;
   assert_equal true !next;
   assert_equal false !error;
@@ -124,10 +124,10 @@ let test_checked_observer_already_terminated_completed _ =
   let n = ref 0 in
   let observer = Rx.Observer.create
       ~on_error:(fun _ -> assert_failure "Should not call on_error")
-      ~on_completed:(fun () -> n := succ !n;)
-      (fun _ -> m := succ !m)
+      ~on_completed:(fun () -> incr n)
+      (fun _ -> incr m)
     |> Rx.Observer.checked in
-  let (on_next, on_error, on_completed) = observer in
+  let (on_completed, on_error, on_next) = observer in
   on_next 1;
   on_next 2;
   on_completed ();
@@ -144,11 +144,11 @@ let test_checked_observer_already_terminated_error _ =
   let m = ref 0 in
   let n = ref 0 in
   let observer = Rx.Observer.create
-      ~on_error:(fun _ -> n := succ !n;)
+      ~on_error:(fun _ -> incr n)
       ~on_completed:(fun () -> assert_failure "Should not call on_completed")
-      (fun _ -> m := succ !m)
+      (fun _ -> incr m)
     |> Rx.Observer.checked in
-  let (on_next, on_error, on_completed) = observer in
+  let (on_completed, on_error, on_next) = observer in
   on_next 1;
   on_next 2;
   on_error (Failure "test");
@@ -167,9 +167,9 @@ let test_checked_observer_reentrant_next _ =
   let observer = Rx.Observer.create
       ~on_error:(fun _ -> assert_failure "Should not call on_error")
       ~on_completed:(fun () -> assert_failure "Should not call on_completed")
-      (fun _ -> n := succ !n; !reentrant_thunk ())
+      (fun _ -> incr n; !reentrant_thunk ())
     |> Rx.Observer.checked in
-  let (on_next, on_error, on_completed) = observer in
+  let (on_completed, on_error, on_next) = observer in
   reentrant_thunk := (fun () ->
     assert_raises ~msg:"on_next"
       (Failure "Reentrancy has been detected.")
@@ -188,11 +188,11 @@ let test_checked_observer_reentrant_error _ =
   let n = ref 0 in
   let reentrant_thunk = ref (fun () -> ()) in
   let observer = Rx.Observer.create
-      ~on_error:(fun _ -> n := succ !n; !reentrant_thunk ())
+      ~on_error:(fun _ -> incr n; !reentrant_thunk ())
       ~on_completed:(fun () -> assert_failure "Should not call on_completed")
       (fun _ -> assert_failure "Should not call on_next")
     |> Rx.Observer.checked in
-  let (on_next, on_error, on_completed) = observer in
+  let (on_completed, on_error, on_next) = observer in
   reentrant_thunk := (fun () ->
     assert_raises ~msg:"on_next"
       (Failure "Reentrancy has been detected.")
@@ -212,10 +212,10 @@ let test_checked_observer_reentrant_completed _ =
   let reentrant_thunk = ref (fun () -> ()) in
   let observer = Rx.Observer.create
       ~on_error:(fun _ -> assert_failure "Should not call on_error")
-      ~on_completed:(fun () -> n := succ !n; !reentrant_thunk ())
+      ~on_completed:(fun () -> incr n; !reentrant_thunk ())
       (fun _ -> assert_failure "Should not call on_next")
     |> Rx.Observer.checked in
-  let (on_next, on_error, on_completed) = observer in
+  let (on_completed, on_error, on_next) = observer in
   reentrant_thunk := (fun () ->
     assert_raises ~msg:"on_next"
       (Failure "Reentrancy has been detected.")
@@ -244,7 +244,7 @@ let test_observer_synchronize_monitor_reentrant _ =
            res := !inOne;
          end
       ) in
-  let (on_next, _, _) = Rx.Observer.synchronize o in
+  let (_, _, on_next) = Rx.Observer.synchronize o in
   on_next_ref := on_next;
   on_next 1;
   assert_bool "res should be true" !res
@@ -263,7 +263,7 @@ let test_observer_synchronize_async_lock_non_reentrant _ =
            res := not !inOne;
          end
       ) in
-  let (on_next, _, _) = Rx.Observer.synchronize_async_lock o in
+  let (_, _, on_next) = Rx.Observer.synchronize_async_lock o in
   on_next_ref := on_next;
   on_next 1;
   assert_bool "res should be true" !res
@@ -274,7 +274,7 @@ let test_observer_synchronize_async_lock_on_next _ =
     ~on_error:(fun _ -> assert_failure "Should not call on_error")
     ~on_completed:(fun () -> assert_failure "Should not call on_completed")
     (fun x -> res := x = 1) in
-  let (on_next, _, _) = Rx.Observer.synchronize_async_lock o in
+  let (_, _, on_next) = Rx.Observer.synchronize_async_lock o in
   on_next 1;
   assert_bool "res should be true" !res
 
@@ -295,7 +295,7 @@ let test_observer_synchronize_async_lock_on_completed _ =
     ~on_error:(fun _ -> assert_failure "Should not call on_error")
     ~on_completed:(fun () -> res := true)
     (fun _ -> assert_failure "Should not call on_next") in
-  let (_, _, on_completed) = Rx.Observer.synchronize_async_lock o in
+  let (on_completed, _, _) = Rx.Observer.synchronize_async_lock o in
   on_completed ();
   assert_bool "res should be true" !res
 

@@ -8,15 +8,16 @@ BuildType: ocamlbuild (0.4)
 Authors: Alessandro Strada
 Maintainers: Alessandro Strada <alessandro.strada@gmail.com>
 Copyrights: (C) 2013 Alessandro Strada
-#Homepage: http://rxocaml.forge.ocamlcore.org
+Homepage: http://rxocaml.forge.ocamlcore.org
 Plugins: META (0.4)
 BuildTools: ocamlbuild
 
 Synopsis: An OCaml implementation of RX Observables.
 
 Description:
-  RxOCaml is an OCaml implementation of Rx Observables
-  (https://rx.codeplex.com/).
+  RxOCaml is a library for composing asynchronous and event-based programs
+  using observable sequences. This library is an OCaml implementation of Rx
+  Observables (https://rx.codeplex.com/).
 
 # Flags
 Flag all
@@ -29,7 +30,7 @@ Library "rxocaml"
   Modules:
     Rx
   BuildDepends: lwt, batteries, threads
-  XMETADescription: Reactive Extensions (Rx) library in OCaml
+  XMETADescription: Reactive Extensions (Rx) library
 
 # Documentation
 Document "rxocaml"
