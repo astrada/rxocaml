@@ -4,6 +4,9 @@ let tests =
   [TestObserver.suite;
    TestAsyncLock.suite;
    TestSubscription.suite;
+   TestScheduler.suite;
+   TestObservable.suite;
+   TestAtomicData.suite;
   ]
 
 let build_suite () =

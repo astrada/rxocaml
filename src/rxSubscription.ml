@@ -6,7 +6,7 @@
 
 type subscription = unit -> unit
 
-let create_empty () = (fun () -> ())
+let empty = (fun () -> ())
 
 let create unsubscribe =
   (* Wrap the unsubscribe function in a lazy value, to get idempotency. *)
@@ -27,32 +27,18 @@ module Boolean = struct
   (* Implementation based on:
    * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/subscriptions/BooleanSubscription.java
    *)
-  type state = {
-    mutable is_unsubscribed: bool;
-    mutex: Mutex.t;
-  }
+  type state = bool RxAtomicData.t
 
   let create unsubscribe =
-    let state = {
-      is_unsubscribed = false;
-      mutex = Mutex.create ();
-    } in
+    let is_unsubscribed = RxAtomicData.create false in
     let unsubscribe_wrapper () =
-      let set_unsubscribed () =
-        BatMutex.synchronize ~lock:state.mutex
-          (fun () ->
-            if not state.is_unsubscribed then begin
-              state.is_unsubscribed <- true;
-              false
-            end else true
-          ) ()
-      in
-      let is_unsubscribed = set_unsubscribed () in
-      if not is_unsubscribed then unsubscribe ()
+      let was_unsubscribed =
+        RxAtomicData.compare_and_set false true is_unsubscribed in
+      if not was_unsubscribed then unsubscribe ()
     in
-    (unsubscribe_wrapper, state)
+    (unsubscribe_wrapper, is_unsubscribed)
 
-  let is_unsubscribed state = state.is_unsubscribed
+  let is_unsubscribed state = RxAtomicData.unsafe_get state
 
 end
 
@@ -91,10 +77,7 @@ module Composite = struct
 
   end
 
-  type state = {
-    mutable state: State.t;
-    mutex: Mutex.t;
-  }
+  type state = State.t RxAtomicData.t
 
   let unsubscribe_from_all subscriptions =
     let exceptions =
@@ -112,69 +95,108 @@ module Composite = struct
       raise (CompositeException exceptions)
 
   let create subscriptions =
-    let state = {
-      state = {
-        State.is_unsubscribed = false;
-        State.subscriptions = subscriptions;
-      };
-      mutex = Mutex.create ();
+    let state = RxAtomicData.create {
+      State.is_unsubscribed = false;
+      subscriptions = subscriptions;
     } in
     let unsubscribe_wrapper () =
-      let set_unsubscribed () =
-        BatMutex.synchronize ~lock:state.mutex
-          (fun () ->
-            if not state.state.State.is_unsubscribed then begin
-              let subscriptions = state.state.State.subscriptions in
-              state.state <- State.unsubscribe state.state;
-              (false, subscriptions)
-            end else (true, [])
-          ) ()
+      let old_state =
+        RxAtomicData.update_if
+          (fun s -> not s.State.is_unsubscribed)
+          (fun s -> State.unsubscribe s)
+          state
       in
-      let (is_unsubscribed, subscriptions) = set_unsubscribed () in
-      if not is_unsubscribed then
-        unsubscribe_from_all subscriptions
+      let was_unsubscribed = old_state.State.is_unsubscribed in
+      let subscriptions = old_state.State.subscriptions in
+      if not was_unsubscribed then unsubscribe_from_all subscriptions
     in
     (unsubscribe_wrapper, state)
 
-  let is_unsubscribed state = state.state.State.is_unsubscribed
+  let is_unsubscribed state =
+    (RxAtomicData.unsafe_get state).State.is_unsubscribed
 
   let add state subscription =
-    let is_unsubscribed =
-      BatMutex.synchronize ~lock:state.mutex
-        (fun () ->
-          if not state.state.State.is_unsubscribed then begin
-            state.state <- State.add state.state subscription;
-            false
-          end else true
-        ) ()
+    let old_state =
+      RxAtomicData.update_if
+        (fun s -> not s.State.is_unsubscribed)
+        (fun s -> State.add s subscription)
+        state
     in
-    if is_unsubscribed then subscription ()
+    if old_state.State.is_unsubscribed then subscription ()
 
   let remove state subscription =
-    let is_unsubscribed =
-      BatMutex.synchronize ~lock:state.mutex
-        (fun () ->
-          if not state.state.State.is_unsubscribed then begin
-            state.state <- State.remove state.state subscription;
-            false
-          end else true
-        ) ()
+    let old_state =
+      RxAtomicData.update_if
+        (fun s -> not s.State.is_unsubscribed)
+        (fun s -> State.remove s subscription)
+        state
     in
-    if not is_unsubscribed then subscription ()
+    if not old_state.State.is_unsubscribed then subscription ()
 
   let clear state =
-    let (is_unsubscribed, subscriptions) =
-      BatMutex.synchronize ~lock:state.mutex
-        (fun () ->
-          if not state.state.State.is_unsubscribed then begin
-            let subscriptions = state.state.State.subscriptions in
-            state.state <- State.clear state.state;
-            (false, subscriptions)
-          end else (true, [])
-        ) ()
+    let old_state =
+      RxAtomicData.update_if
+        (fun s -> not s.State.is_unsubscribed)
+        (fun s -> State.clear s)
+        state
     in
-    if not is_unsubscribed then
-      unsubscribe_from_all subscriptions
+    let was_unsubscribed = old_state.State.is_unsubscribed in
+    let subscriptions = old_state.State.subscriptions in
+    if not was_unsubscribed then unsubscribe_from_all subscriptions
+
+end
+
+module MultipleAssignment = struct
+  module State = struct
+    type t = {
+      is_unsubscribed: bool;
+      subscription: subscription;
+    }
+
+    let unsubscribe state = {
+      is_unsubscribed = true;
+      subscription = state.subscription;
+    }
+
+    let set state subscription = {
+      is_unsubscribed = state.is_unsubscribed;
+      subscription = subscription;
+    }
+
+  end
+
+  type state = State.t RxAtomicData.t
+
+  let create subscription =
+    let state = RxAtomicData.create {
+      State.is_unsubscribed = false;
+      State.subscription = subscription;
+    } in
+    let unsubscribe_wrapper () =
+      let old_state =
+        RxAtomicData.update_if
+          (fun s -> not s.State.is_unsubscribed)
+          (fun s -> State.unsubscribe s)
+          state
+      in
+      let was_unsubscribed = old_state.State.is_unsubscribed in
+      let subscription = old_state.State.subscription in
+      if not was_unsubscribed then subscription ()
+    in
+    (unsubscribe_wrapper, state)
+
+  let is_unsubscribed state =
+    (RxAtomicData.unsafe_get state).State.is_unsubscribed
+
+  let set state subscription =
+    let old_state =
+      RxAtomicData.update_if
+        (fun s -> not s.State.is_unsubscribed)
+        (fun s -> State.set s subscription)
+        state
+    in
+    let was_unsubscribed = old_state.State.is_unsubscribed in
+    if was_unsubscribed then subscription ()
 
 end
 

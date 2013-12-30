@@ -2,7 +2,7 @@
 
 type subscription = unit -> unit
 
-val create_empty : unit -> subscription
+val empty : subscription
 
 val create : (unit -> unit) -> subscription
 
@@ -34,6 +34,15 @@ module Composite : sig
   val remove : state -> subscription -> unit
 
   val clear : state -> unit
+
+end
+
+module MultipleAssignment : sig
+  include BooleanSubscription
+
+  val create : subscription -> (subscription * state)
+
+  val set : state -> subscription -> unit
 
 end
 

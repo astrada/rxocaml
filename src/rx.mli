@@ -127,7 +127,7 @@ end
 module Subscription : sig
 
   (** A subscription that does nothing. *)
-  val create_empty : unit -> subscription
+  val empty : subscription
 
   (** A subscription which invokes the given closure when unsubscribed. *)
   val create : (unit -> unit) -> subscription
@@ -176,6 +176,56 @@ module Subscription : sig
     val clear : state -> unit
 
   end
+
+  (**
+   Subscription whose underlying subscription can be swapped for another
+   subscription.
+
+   @see <http://msdn.microsoft.com/en-us/library/system.reactive.disposables.multipleassignmentdisposable> Rx.Net equivalent MultipleAssignmentDisposable
+   *)
+  module MultipleAssignment : sig
+    include BooleanSubscription
+
+    val create : subscription -> (subscription * state)
+
+    val set : state -> subscription -> unit
+
+  end
+
+end
+
+(** Represents an object that schedules units of work. *)
+module Scheduler : sig
+
+  module type Scheduler = sig
+    type t
+
+    val schedule_absolute :
+      ?due_time:float -> (unit -> subscription) -> subscription
+
+    val schedule_relative :
+      float -> (unit -> subscription) -> subscription
+
+    val schedule_recursive :
+      ((unit -> subscription) -> subscription) -> subscription
+
+  end
+
+  (**
+   Schedules work on the current thread but does not execute immediately.
+   Work is put in a queue and executed after the current unit of work is
+   completed.
+   *)
+  module CurrentThread : Scheduler
+
+end
+
+module Observable : sig
+  val empty : 'a observable
+
+  val from_enum : 'a BatEnum.t -> 'a observable
+
+  val count : 'a observable -> int observable
 
 end
 

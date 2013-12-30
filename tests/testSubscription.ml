@@ -143,6 +143,27 @@ let test_composite_subscription_unsubscribe_idempotence_concurrently _ =
   (* We should have only unsubscribed once *)
   assert_equal 1 !counter
 
+let test_multiple_assignment_subscription _ =
+  let (m, state) =
+    Rx.Subscription.MultipleAssignment.create (Rx.Subscription.empty) in
+  let unsub1 = ref false in
+  let s1 = Rx.Subscription.create (fun () -> unsub1 := true) in
+  Rx.Subscription.MultipleAssignment.set state s1;
+  assert_equal false (Rx.Subscription.MultipleAssignment.is_unsubscribed state);
+  let unsub2 = ref false in
+  let s2 = Rx.Subscription.create (fun () -> unsub2 := true) in
+  Rx.Subscription.MultipleAssignment.set state s2;
+  assert_equal false (Rx.Subscription.MultipleAssignment.is_unsubscribed state);
+  assert_equal false !unsub1;
+  m ();
+  assert_equal true !unsub2;
+  assert_equal true (Rx.Subscription.MultipleAssignment.is_unsubscribed state);
+  let unsub3 = ref false in
+  let s3 = Rx.Subscription.create (fun () -> unsub3 := true) in
+  Rx.Subscription.MultipleAssignment.set state s3;
+  assert_equal true !unsub3;
+  assert_equal true (Rx.Subscription.MultipleAssignment.is_unsubscribed state)
+
 let suite = "Subscription tests" >:::
   ["test_unsubscribe_only_once" >:: test_unsubscribe_only_once;
    "test_boolean_subscription" >:: test_boolean_subscription;
@@ -158,5 +179,7 @@ let suite = "Subscription tests" >:::
      test_composite_subscription_unsubscribe_idempotence;
    "test_composite_subscription_unsubscribe_idempotence_concurrently" >::
      test_composite_subscription_unsubscribe_idempotence_concurrently;
+   "test_multiple_assignment_subscription" >::
+     test_multiple_assignment_subscription;
   ]
 

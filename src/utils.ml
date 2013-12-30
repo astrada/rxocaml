@@ -7,3 +7,6 @@ let try_finally thunk finally =
     finally ();
     raise e
 
+let current_thread_id () =
+  Thread.self () |> Thread.id
+
