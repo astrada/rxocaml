@@ -1,6 +1,6 @@
 (* Internal module. (see Rx.Scheduler) *)
 
-module type Scheduler = sig
+module type Base = sig
   type t
 
   val schedule_absolute :
@@ -11,11 +11,19 @@ module type Scheduler = sig
     float -> (unit -> RxSubscription.subscription) ->
     RxSubscription.subscription
 
+end
+
+module type S = sig
+  include Base
+
   val schedule_recursive :
     ((unit -> RxSubscription.subscription) -> RxSubscription.subscription) ->
     RxSubscription.subscription
 
 end
 
-module CurrentThread : Scheduler
+module MakeScheduler :
+  functor (BaseScheduler : Base) -> S
+
+module CurrentThread : S
 

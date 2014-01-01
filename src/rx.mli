@@ -197,7 +197,7 @@ end
 (** Represents an object that schedules units of work. *)
 module Scheduler : sig
 
-  module type Scheduler = sig
+  module type Base = sig
     type t
 
     val schedule_absolute :
@@ -206,17 +206,25 @@ module Scheduler : sig
     val schedule_relative :
       float -> (unit -> subscription) -> subscription
 
+  end
+
+  module type S = sig
+    include Base
+
     val schedule_recursive :
       ((unit -> subscription) -> subscription) -> subscription
 
   end
+
+  module MakeScheduler :
+    functor (BaseScheduler : Base) -> S
 
   (**
    Schedules work on the current thread but does not execute immediately.
    Work is put in a queue and executed after the current unit of work is
    completed.
    *)
-  module CurrentThread : Scheduler
+  module CurrentThread : S
 
 end
 

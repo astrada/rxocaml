@@ -4,7 +4,7 @@
  * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/Scheduler.java
  *)
 
-module type Scheduler = sig
+module type Base = sig
   type t
 
   val schedule_absolute :
@@ -15,9 +15,39 @@ module type Scheduler = sig
     float -> (unit -> RxSubscription.subscription) ->
     RxSubscription.subscription
 
+end
+
+module type S = sig
+  include Base
+
   val schedule_recursive :
     ((unit -> RxSubscription.subscription) -> RxSubscription.subscription) ->
     RxSubscription.subscription
+
+end
+
+module MakeScheduler(BaseScheduler : Base) = struct
+  include BaseScheduler
+
+  let schedule_recursive cont =
+    let open RxSubscription in
+    let (child_subscription, child_state) =
+      MultipleAssignment.create empty in
+    let (parent_subscription, parent_state) =
+      Composite.create [child_subscription] in
+    let rec schedule_k k =
+      let k_subscription =
+        if Composite.is_unsubscribed parent_state then empty
+        else BaseScheduler.schedule_absolute
+          (fun () -> k (fun () -> schedule_k k))
+      in
+      MultipleAssignment.set child_state k_subscription;
+      child_subscription in
+    let scheduled_subscription =
+      BaseScheduler.schedule_absolute (fun () -> schedule_k cont)
+    in
+    Composite.add parent_state scheduled_subscription;
+    parent_subscription
 
 end
 
@@ -88,7 +118,7 @@ end
 
 module TimedActionPriorityQueue = BatHeap.Make(TimedAction)
 
-module CurrentThread = struct
+module CurrentThreadBase = struct
   type t = {
     queue_table: (int, TimedActionPriorityQueue.t option) Hashtbl.t;
     counter: int;
@@ -169,27 +199,7 @@ module CurrentThread = struct
     let due_time = now () +. delay in
     schedule_absolute ~due_time action
 
-  let schedule_recursive cont =
-    let open RxSubscription in
-    let (child_subscription, child_state) =
-      MultipleAssignment.create empty in
-    let (parent_subscription, parent_state) =
-      Composite.create [child_subscription] in
-    let rec schedule_k k =
-      let k_subscription =
-        if Composite.is_unsubscribed parent_state then empty
-        else schedule_absolute
-          (fun () -> k (fun () -> schedule_k k))
-      in
-      MultipleAssignment.set child_state k_subscription;
-      child_subscription in
-    let scheduled_subscription =
-      schedule_absolute (fun () -> schedule_k cont)
-    in
-    Composite.add
-      parent_state
-      scheduled_subscription;
-    parent_subscription
-
 end
+
+module CurrentThread = MakeScheduler(CurrentThreadBase)
 
