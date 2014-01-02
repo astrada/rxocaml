@@ -3,25 +3,6 @@
  Observables}.
  *)
 
-(**
- The observable type that implements the Reactive Pattern.
-
- An {i observable} is a closure: [subscribe: 'a observer -> subscription].
- 
- An observer must call an observable's subscribe function in
- order to receive items and notifications from the observable.
- An observable is responsible for accepting all subscriptions and notifying
- all Observers. Unless the documentation for a particular observable
- implementation indicates otherwise, Observers should make no assumptions
- about the order in which multiple Observers will receive their
- notifications.
- 
- For more information see the
- {{:https://github.com/Netflix/RxJava/wiki/Observable}RxJava Wiki}
- *)
-type +'a observable =
-  (* subscribe: *) 'a RxCore.observer -> RxCore.subscription
-
 (** Provides a set of functions for creating observers. *)
 module Observer : sig
 
@@ -193,26 +174,27 @@ end
 
 module Observable : sig
   module type O = sig
-    val empty : 'a observable
+    val empty : 'a RxCore.observable
 
-    val materialize : 'a observable -> 'a RxCore.notification observable
+    val materialize :
+      'a RxCore.observable -> 'a RxCore.notification RxCore.observable
 
-    val from_enum : 'a BatEnum.t -> 'a observable
+    val from_enum : 'a BatEnum.t -> 'a RxCore.observable
 
-    val to_enum : 'a observable -> 'a BatEnum.t
+    val to_enum : 'a RxCore.observable -> 'a BatEnum.t
 
-    val count : 'a observable -> int observable
+    val count : 'a RxCore.observable -> int RxCore.observable
 
-    val drop : int -> 'a observable -> 'a observable
+    val drop : int -> 'a RxCore.observable -> 'a RxCore.observable
 
-    val take : int -> 'a observable -> 'a observable
+    val take : int -> 'a RxCore.observable -> 'a RxCore.observable
   
-    val take_last : int -> 'a observable -> 'a observable
+    val take_last : int -> 'a RxCore.observable -> 'a RxCore.observable
 
-    val single : 'a observable -> 'a observable
+    val single : 'a RxCore.observable -> 'a RxCore.observable
 
     module Blocking : sig
-      val single : 'a observable -> 'a
+      val single : 'a RxCore.observable -> 'a
 
     end
 
