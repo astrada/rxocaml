@@ -13,10 +13,21 @@ let test_set _ =
   RxAtomicData.set 1 v;
   assert_equal 1 (RxAtomicData.get v)
 
+let test_get_and_set _ =
+  let v = RxAtomicData.create 0 in
+  let v' = RxAtomicData.get_and_set 1 v in
+  assert_equal 1 (RxAtomicData.get v);
+  assert_equal 0 v'
+
 let test_update _ =
   let v = RxAtomicData.create 0 in
   RxAtomicData.update succ v;
   assert_equal 1 (RxAtomicData.get v)
+
+let test_update_and_get _ =
+  let v = RxAtomicData.create 0 in
+  let v' = RxAtomicData.update_and_get succ v in
+  assert_equal 1 v'
 
 let test_compare_and_set _ =
   let v = RxAtomicData.create 0 in
@@ -58,7 +69,9 @@ let suite = "Atomic data tests" >:::
   ["test_unsafe_get" >:: test_unsafe_get;
    "test_get" >:: test_get;
    "test_set" >:: test_set;
+   "test_get_and_set" >:: test_get_and_set;
    "test_update" >:: test_update;
+   "test_update_and_get" >:: test_update_and_get;
    "test_compare_and_set" >:: test_compare_and_set;
    "test_concurrent_update" >:: test_concurrent_update;
   ]

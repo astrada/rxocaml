@@ -192,6 +192,23 @@ module Subscription : sig
 
   end
 
+  (**
+   Subscription which only allows a single assignment of its underlying
+   subscription. If an underlying subscription has already been
+   set, future attempts to set the underlying disposable resource will raise
+   [Failure "SingleAssignment"].
+
+   @see <https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/Disposables/SingleAssignmentDisposable.cs> Rx.Net equivalent SingleAssignmentDisposable
+   *)
+  module SingleAssignment : sig
+    include BooleanSubscription
+
+    val create : unit -> (subscription * state)
+
+    val set : state -> subscription -> unit
+
+  end
+
 end
 
 (** Represents an object that schedules units of work. *)
@@ -228,12 +245,43 @@ module Scheduler : sig
 
 end
 
+type 'a notification =
+  [ `OnCompleted
+  | `OnError of exn
+  | `OnNext of 'a
+  ]
+
 module Observable : sig
-  val empty : 'a observable
+  module type O = sig
+    val empty : 'a observable
 
-  val from_enum : 'a BatEnum.t -> 'a observable
+    val materialize : 'a observable -> 'a notification observable
 
-  val count : 'a observable -> int observable
+    val from_enum : 'a BatEnum.t -> 'a observable
+
+    val to_enum : 'a observable -> 'a BatEnum.t
+
+    val count : 'a observable -> int observable
+
+    val drop : int -> 'a observable -> 'a observable
+
+    val take : int -> 'a observable -> 'a observable
+  
+    val take_last : int -> 'a observable -> 'a observable
+
+    val single : 'a observable -> 'a observable
+
+    module Blocking : sig
+      val single : 'a observable -> 'a
+
+    end
+
+  end
+
+  module MakeObservable :
+    functor(Scheduler : Scheduler.S) -> O
+
+  module CurrentThread : O
 
 end
 

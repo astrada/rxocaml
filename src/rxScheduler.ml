@@ -182,7 +182,7 @@ module CurrentThreadBase = struct
           action ()
         done
       with
-      | Invalid_argument _ -> reset_queue ()
+      | Invalid_argument "find_min" -> reset_queue ()
       | e -> reset_queue (); raise e
     end
 

@@ -46,3 +46,12 @@ module MultipleAssignment : sig
 
 end
 
+module SingleAssignment : sig
+  include BooleanSubscription
+
+  val create : unit -> (subscription * state)
+
+  val set : state -> subscription -> unit
+
+end
+

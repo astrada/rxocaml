@@ -16,8 +16,14 @@ val set : 'a -> 'a t -> unit
 (** Non-synchronized setter. *)
 val unsafe_set : 'a -> 'a t -> unit
 
+(** Synchronized setter. Returns the value before updating. *)
+val get_and_set : 'a -> 'a t -> 'a
+
 (** Synchronized update. *)
 val update : ('a -> 'a) -> 'a t -> unit
+
+(** Synchronized update. Returns the updated value. *)
+val update_and_get : ('a -> 'a) -> 'a t -> 'a
 
 (**
  Synchronized compare and set (CAS).

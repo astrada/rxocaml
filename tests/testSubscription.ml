@@ -164,6 +164,27 @@ let test_multiple_assignment_subscription _ =
   assert_equal true !unsub3;
   assert_equal true (Rx.Subscription.MultipleAssignment.is_unsubscribed state)
 
+let test_single_assignment_subscription _ =
+  let (m, state) = Rx.Subscription.SingleAssignment.create () in
+  let unsub1 = ref false in
+  let s1 = Rx.Subscription.create (fun () -> unsub1 := true) in
+  Rx.Subscription.SingleAssignment.set state s1;
+  assert_equal false (Rx.Subscription.SingleAssignment.is_unsubscribed state);
+  let unsub2 = ref false in
+  let s2 = Rx.Subscription.create (fun () -> unsub2 := true) in
+  begin try
+    Rx.Subscription.SingleAssignment.set state s2;
+    assert_failure "Should raise an exception";
+  with e ->
+    assert_equal (Failure "SingleAssignment") e
+  end;
+  assert_equal false (Rx.Subscription.SingleAssignment.is_unsubscribed state);
+  assert_equal false !unsub1;
+  m ();
+  assert_equal true !unsub1;
+  assert_equal false !unsub2;
+  assert_equal true (Rx.Subscription.SingleAssignment.is_unsubscribed state)
+
 let suite = "Subscription tests" >:::
   ["test_unsubscribe_only_once" >:: test_unsubscribe_only_once;
    "test_boolean_subscription" >:: test_boolean_subscription;
@@ -181,5 +202,7 @@ let suite = "Subscription tests" >:::
      test_composite_subscription_unsubscribe_idempotence_concurrently;
    "test_multiple_assignment_subscription" >::
      test_multiple_assignment_subscription;
+   "test_single_assignment_subscription" >::
+     test_single_assignment_subscription;
   ]
 
