@@ -7,7 +7,8 @@
 module type O = sig
   val empty : 'a RxCore.observable
 
-  val materialize : 'a RxCore.observable -> 'a RxCore.notification RxCore.observable
+  val materialize :
+    'a RxCore.observable -> 'a RxCore.notification RxCore.observable
 
   val from_enum : 'a BatEnum.t -> 'a RxCore.observable
 
@@ -49,12 +50,12 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
       let materialize_observer =
         RxObserver.create
           ~on_completed:(fun () ->
-            on_next `OnCompleted;
+            on_next RxCore.OnCompleted;
             on_completed ())
           ~on_error:(fun e ->
-            on_next (`OnError e);
+            on_next (RxCore.OnError e);
             on_completed ())
-          (fun v -> on_next (`OnNext v))
+          (fun v -> on_next (RxCore.OnNext v))
       in
       observable materialize_observer
     )
@@ -102,9 +103,9 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
             if Queue.is_empty queue then Condition.wait condition mutex;
             let n = Queue.take queue in
             match n with
-            | `OnCompleted -> raise BatEnum.No_more_elements
-            | `OnError e -> raise e
-            | `OnNext v -> v
+            | RxCore.OnCompleted -> raise BatEnum.No_more_elements
+            | RxCore.OnError e -> raise e
+            | RxCore.OnNext v -> v
           ) ()
       )
 

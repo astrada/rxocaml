@@ -4,8 +4,6 @@
  * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Observer.Extensions.cs
  *)
 
-type -'a observer = (unit -> unit) * (exn -> unit) * ('a -> unit)
-
 let create
     ?(on_completed = fun () -> ())
     ?(on_error = fun e -> raise e)

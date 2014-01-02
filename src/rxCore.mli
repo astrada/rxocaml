@@ -86,8 +86,7 @@ module type MutableState = sig
 end
 
 type 'a notification =
-  [ `OnCompleted
-  | `OnError of exn
-  | `OnNext of 'a
-  ]
+  | OnCompleted
+  | OnError of exn
+  | OnNext of 'a
 

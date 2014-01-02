@@ -1,7 +1,4 @@
-type -'a observer =
-  (unit -> unit) *
-  (exn -> unit) *
-  ('a -> unit)
+type -'a observer = (unit -> unit) * (exn -> unit) * ('a -> unit)
 
 type subscription = unit -> unit
 
@@ -20,8 +17,7 @@ module type MutableState = sig
 end
 
 type 'a notification =
-  [ `OnCompleted
-  | `OnError of exn
-  | `OnNext of 'a
-  ]
+  | OnCompleted
+  | OnError of exn
+  | OnNext of 'a
 

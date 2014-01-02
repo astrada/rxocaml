@@ -95,11 +95,11 @@ let test_materialize _ =
   let (observer, state) = TestHelper.Observer.create () in
   let _ = materialized_observable observer in
   assert_equal [
-    `OnNext "a";
-    `OnNext "b";
-    `OnNext "c";
-    `OnNext "d";
-    `OnCompleted] @@ TestHelper.Observer.on_next_values state;
+    RxCore.OnNext "a";
+    RxCore.OnNext "b";
+    RxCore.OnNext "c";
+    RxCore.OnNext "d";
+    RxCore.OnCompleted] @@ TestHelper.Observer.on_next_values state;
   assert_equal true @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
@@ -118,11 +118,12 @@ let test_materialize_error _ =
   let (observer, state) = TestHelper.Observer.create () in
   let _ = materialized_observable observer in
   assert_equal [
-    `OnNext "a";
-    `OnNext "b";
-    `OnNext "c";
-    `OnNext "d";
-    `OnError (Failure "test")] @@ TestHelper.Observer.on_next_values state;
+    RxCore.OnNext "a";
+    RxCore.OnNext "b";
+    RxCore.OnNext "c";
+    RxCore.OnNext "d";
+    RxCore.OnError (Failure "test")
+  ] @@ TestHelper.Observer.on_next_values state;
   assert_equal true @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
