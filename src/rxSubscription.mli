@@ -1,12 +1,10 @@
 (* Internal module (see Rx.Subscription) *)
 
-type subscription = unit -> unit
+val empty : RxCore.subscription
 
-val empty : subscription
+val create : (unit -> unit) -> RxCore.subscription
 
-val create : (unit -> unit) -> subscription
-
-val from_task : 'a Lwt.t -> subscription
+val from_task : 'a Lwt.t -> RxCore.subscription
 
 module type BooleanSubscription = sig
   type state
@@ -18,7 +16,7 @@ end
 module Boolean : sig
   include BooleanSubscription
 
-  val create : (unit -> unit) -> (subscription * state)
+  val create : (unit -> unit) -> (RxCore.subscription * state)
 
 end
 
@@ -27,11 +25,11 @@ module Composite : sig
 
   include BooleanSubscription
 
-  val create : subscription list -> (subscription * state)
+  val create : RxCore.subscription list -> (RxCore.subscription * state)
 
-  val add : state -> subscription -> unit
+  val add : state -> RxCore.subscription -> unit
 
-  val remove : state -> subscription -> unit
+  val remove : state -> RxCore.subscription -> unit
 
   val clear : state -> unit
 
@@ -40,18 +38,18 @@ end
 module MultipleAssignment : sig
   include BooleanSubscription
 
-  val create : subscription -> (subscription * state)
+  val create : RxCore.subscription -> (RxCore.subscription * state)
 
-  val set : state -> subscription -> unit
+  val set : state -> RxCore.subscription -> unit
 
 end
 
 module SingleAssignment : sig
   include BooleanSubscription
 
-  val create : unit -> (subscription * state)
+  val create : unit -> (RxCore.subscription * state)
 
-  val set : state -> subscription -> unit
+  val set : state -> RxCore.subscription -> unit
 
 end
 

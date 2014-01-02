@@ -4,12 +4,12 @@ module type Base = sig
   type t
 
   val schedule_absolute :
-    ?due_time:float -> (unit -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    ?due_time:float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
 
   val schedule_relative :
-    float -> (unit -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
 
 end
 
@@ -17,8 +17,8 @@ module type S = sig
   include Base
 
   val schedule_recursive :
-    ((unit -> RxSubscription.subscription) -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    ((unit -> RxCore.subscription) -> RxCore.subscription) ->
+    RxCore.subscription
 
 end
 

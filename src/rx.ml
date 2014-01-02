@@ -1,5 +1,3 @@
-type subscription = RxSubscription.subscription
-
 type +'a observable = 'a RxObservable.observable
 
 module Observer = RxObserver

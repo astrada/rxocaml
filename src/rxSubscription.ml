@@ -4,8 +4,6 @@
  * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/subscriptions/Subscriptions.java
  *)
 
-type subscription = unit -> unit
-
 let empty = (fun () -> ())
 
 let create unsubscribe =
@@ -51,7 +49,7 @@ module Composite = struct
   module State = struct
     type t = {
       is_unsubscribed: bool;
-      subscriptions: subscription list;
+      subscriptions: RxCore.subscription list;
     }
 
     let unsubscribe state = {
@@ -150,7 +148,7 @@ module MultipleAssignment = struct
   module State = struct
     type t = {
       is_unsubscribed: bool;
-      subscription: subscription;
+      subscription: RxCore.subscription;
     }
 
     let unsubscribe state = {
@@ -205,7 +203,7 @@ module SingleAssignment = struct
   module State = struct
     type t = {
       is_unsubscribed: bool;
-      subscription: subscription option;
+      subscription: RxCore.subscription option;
     }
 
     let unsubscribe state = {

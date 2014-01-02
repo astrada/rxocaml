@@ -4,23 +4,6 @@
  *)
 
 (**
- Subscription returns from observable's subscribe function to allow
- unsubscribing.
- 
- A {i subscription} is a closure: [unsubscribe: unit -> unit].
-
- The unsubscribe function stops the notifications on the observer that was
- registered when this Subscription was received.
- This allows unregistering an observer before it has finished receiving all
- events (ie. before [on_completed] is called).
- 
- This type is the RxOCaml equivalent of [IDisposable] in Microsoft's Rx
- implementation.
- *)
-type subscription =
-  (* unsubscribe: *) unit -> unit
-
-(**
  The observable type that implements the Reactive Pattern.
 
  An {i observable} is a closure: [subscribe: 'a observer -> subscription].
@@ -37,7 +20,7 @@ type subscription =
  {{:https://github.com/Netflix/RxJava/wiki/Observable}RxJava Wiki}
  *)
 type +'a observable =
-  (* subscribe: *) 'a RxCore.observer -> subscription
+  (* subscribe: *) 'a RxCore.observer -> RxCore.subscription
 
 (** Provides a set of functions for creating observers. *)
 module Observer : sig
@@ -89,14 +72,14 @@ end
 module Subscription : sig
 
   (** A subscription that does nothing. *)
-  val empty : subscription
+  val empty : RxCore.subscription
 
   (** A subscription which invokes the given closure when unsubscribed. *)
-  val create : (unit -> unit) -> subscription
+  val create : (unit -> unit) -> RxCore.subscription
 
   (** A subscription that wraps a task (Lwt cancelable thread) and cancels it
    when unsubscribed. *)
-  val from_task : 'a Lwt.t -> subscription
+  val from_task : 'a Lwt.t -> RxCore.subscription
 
   (**
    Subscription that can be checked for status such as in a loop inside an
@@ -114,7 +97,7 @@ module Subscription : sig
   module Boolean : sig
     include BooleanSubscription
 
-    val create : (unit -> unit) -> (subscription * state)
+    val create : (unit -> unit) -> (RxCore.subscription * state)
 
   end
 
@@ -129,11 +112,11 @@ module Subscription : sig
 
     include BooleanSubscription
 
-    val create : subscription list -> (subscription * state)
+    val create : RxCore.subscription list -> (RxCore.subscription * state)
 
-    val add : state -> subscription -> unit
+    val add : state -> RxCore.subscription -> unit
 
-    val remove : state -> subscription -> unit
+    val remove : state -> RxCore.subscription -> unit
 
     val clear : state -> unit
 
@@ -148,9 +131,9 @@ module Subscription : sig
   module MultipleAssignment : sig
     include BooleanSubscription
 
-    val create : subscription -> (subscription * state)
+    val create : RxCore.subscription -> (RxCore.subscription * state)
 
-    val set : state -> subscription -> unit
+    val set : state -> RxCore.subscription -> unit
 
   end
 
@@ -165,9 +148,9 @@ module Subscription : sig
   module SingleAssignment : sig
     include BooleanSubscription
 
-    val create : unit -> (subscription * state)
+    val create : unit -> (RxCore.subscription * state)
 
-    val set : state -> subscription -> unit
+    val set : state -> RxCore.subscription -> unit
 
   end
 
@@ -180,10 +163,10 @@ module Scheduler : sig
     type t
 
     val schedule_absolute :
-      ?due_time:float -> (unit -> subscription) -> subscription
+      ?due_time:float -> (unit -> RxCore.subscription) -> RxCore.subscription
 
     val schedule_relative :
-      float -> (unit -> subscription) -> subscription
+      float -> (unit -> RxCore.subscription) -> RxCore.subscription
 
   end
 
@@ -191,7 +174,8 @@ module Scheduler : sig
     include Base
 
     val schedule_recursive :
-      ((unit -> subscription) -> subscription) -> subscription
+      ((unit -> RxCore.subscription) -> RxCore.subscription) ->
+      RxCore.subscription
 
   end
 

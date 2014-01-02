@@ -4,7 +4,7 @@
  * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/Observable.java
  *)
 
-type +'a observable = 'a RxCore.observer -> RxSubscription.subscription
+type +'a observable = 'a RxCore.observer -> RxCore.subscription
 
 module type O = sig
   val empty : 'a observable

@@ -8,12 +8,12 @@ module type Base = sig
   type t
 
   val schedule_absolute :
-    ?due_time:float -> (unit -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    ?due_time:float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
 
   val schedule_relative :
-    float -> (unit -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
 
 end
 
@@ -21,8 +21,8 @@ module type S = sig
   include Base
 
   val schedule_recursive :
-    ((unit -> RxSubscription.subscription) -> RxSubscription.subscription) ->
-    RxSubscription.subscription
+    ((unit -> RxCore.subscription) -> RxCore.subscription) ->
+    RxCore.subscription
 
 end
 
@@ -54,8 +54,8 @@ end
 let now () = Unix.gettimeofday ()
 
 (* val create_sleeping_action :
- *   (unit -> RxSubscription.subscription) -> float ->
- *   (unit -> RxSubscription.subscription)
+ *   (unit -> RxCore.subscription) -> float ->
+ *   (unit -> RxCore.subscription)
  *)
 let create_sleeping_action action exec_time =
   (fun () ->
@@ -68,7 +68,7 @@ let create_sleeping_action action exec_time =
 module DiscardableAction = struct
   type t = {
     ready: bool;
-    unsubscribe: RxSubscription.subscription;
+    unsubscribe: RxCore.subscription;
   }
 
   let create action =
