@@ -14,7 +14,7 @@ module type O = sig
 
   val to_enum : 'a RxCore.observable -> 'a BatEnum.t
 
-  val count : 'a RxCore.observable -> int RxCore.observable
+  val length : 'a RxCore.observable -> int RxCore.observable
 
   val drop : int -> 'a RxCore.observable -> 'a RxCore.observable
 
@@ -109,13 +109,13 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
           ) ()
       )
 
-  let count observable =
+  let length observable =
     (* Implementation based on:
      * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Linq/Reactive/Linq/Observable/Count.cs
      *)
     (fun (on_completed, on_error, on_next) ->
       let counter = RxAtomicData.create 0 in
-      let count_observer =
+      let length_observer =
         RxObserver.create
           ~on_completed:(fun () ->
             let v = RxAtomicData.unsafe_get counter in
@@ -125,7 +125,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
           ~on_error
           (fun _ -> RxAtomicData.update succ counter)
       in
-      observable count_observer)
+      observable length_observer)
 
   let drop n observable =
     (* Implementation based on:

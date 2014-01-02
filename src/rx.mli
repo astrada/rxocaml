@@ -205,7 +205,7 @@ module Observable : sig
 
     val to_enum : 'a RxCore.observable -> 'a BatEnum.t
 
-    val count : 'a RxCore.observable -> int RxCore.observable
+    val length : 'a RxCore.observable -> int RxCore.observable
 
     val drop : int -> 'a RxCore.observable -> 'a RxCore.observable
 

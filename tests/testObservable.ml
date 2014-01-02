@@ -19,10 +19,10 @@ let test_count _ =
       on_completed ();
       Rx.Subscription.empty;
     ) in
-  let count_observable =
-    Rx.Observable.CurrentThread.count observable in
+  let length_observable =
+    Rx.Observable.CurrentThread.length observable in
   let (observer, state) = TestHelper.Observer.create () in
-  let _ = count_observable observer in
+  let _ = length_observable observer in
   assert_equal [3] @@ TestHelper.Observer.on_next_values state;
   assert_equal true @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
@@ -229,7 +229,7 @@ let test_from_list _ =
     Rx.Observable.CurrentThread.from_enum @@ BatList.enum xs in
   assert_equal 3
     Rx.Observable.CurrentThread.(
-      items |> from_list |> count |> Blocking.single
+      items |> from_list |> length |> Blocking.single
     );
   assert_equal "two"
     Rx.Observable.CurrentThread.(
