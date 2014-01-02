@@ -4,7 +4,12 @@ type subscription = unit -> unit
 
 type +'a observable = 'a observer -> subscription
 
-module type MutableState = sig
+type 'a notification =
+  | OnCompleted
+  | OnError of exn
+  | OnNext of 'a
+
+module type MutableData = sig
 
   type 'a t
 
@@ -12,12 +17,19 @@ module type MutableState = sig
 
   val get : 'a t -> 'a
 
-  val set : 'a t -> 'a -> unit
+  val set : 'a -> 'a t -> unit
 
 end
 
-type 'a notification =
-  | OnCompleted
-  | OnError of exn
-  | OnNext of 'a
+module DataRef = struct
+
+  type 'a t = 'a ref
+
+  let create v = ref v
+
+  let get r = BatRef.get r
+
+  let set v r = BatRef.set r v
+
+end
 

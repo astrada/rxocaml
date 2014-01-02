@@ -22,6 +22,28 @@ module Observer : sig
     ('a -> unit) ->
     'a RxCore.observer
 
+  module type ObserverState = sig
+
+    type 'a state
+
+    val initial_state : unit -> 'a state
+
+    val on_completed : 'a state -> 'a state
+
+    val on_error : exn -> 'a state -> 'a state
+
+    val on_next : 'a -> 'a state -> 'a state
+
+  end
+
+  module MakeObserverWithState :
+      functor (O : ObserverState) ->
+      functor (D : RxCore.MutableData) -> sig
+
+    val create : unit -> ('a RxCore.observer * 'a O.state D.t)
+
+  end
+
   (**
    Checks access to the observer for grammar violations. This includes
    checking for multiple [on_error] or [on_completed] calls, as well as

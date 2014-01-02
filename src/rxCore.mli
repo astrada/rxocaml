@@ -72,8 +72,12 @@ type subscription =
 type +'a observable =
   (* subscribe: *) 'a observer -> subscription
 
+type 'a notification =
+  | OnCompleted
+  | OnError of exn
+  | OnNext of 'a
 
-module type MutableState = sig
+module type MutableData = sig
 
   type 'a t
 
@@ -81,12 +85,9 @@ module type MutableState = sig
 
   val get : 'a t -> 'a
 
-  val set : 'a t -> 'a -> unit
+  val set : 'a -> 'a t -> unit
 
 end
 
-type 'a notification =
-  | OnCompleted
-  | OnError of exn
-  | OnNext of 'a
+module DataRef : MutableData
 

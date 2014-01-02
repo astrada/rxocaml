@@ -144,62 +144,7 @@ module Composite = struct
 
 end
 
-module MultipleAssignment = struct
-  module State = struct
-    type t = {
-      is_unsubscribed: bool;
-      subscription: RxCore.subscription;
-    }
-
-    let unsubscribe state = {
-      is_unsubscribed = true;
-      subscription = state.subscription;
-    }
-
-    let set state subscription = {
-      is_unsubscribed = state.is_unsubscribed;
-      subscription = subscription;
-    }
-
-  end
-
-  type state = State.t RxAtomicData.t
-
-  let create subscription =
-    let state = RxAtomicData.create {
-      State.is_unsubscribed = false;
-      State.subscription = subscription;
-    } in
-    let unsubscribe_wrapper () =
-      let old_state =
-        RxAtomicData.update_if
-          (fun s -> not s.State.is_unsubscribed)
-          (fun s -> State.unsubscribe s)
-          state
-      in
-      let was_unsubscribed = old_state.State.is_unsubscribed in
-      let subscription = old_state.State.subscription in
-      if not was_unsubscribed then subscription ()
-    in
-    (unsubscribe_wrapper, state)
-
-  let is_unsubscribed state =
-    (RxAtomicData.unsafe_get state).State.is_unsubscribed
-
-  let set state subscription =
-    let old_state =
-      RxAtomicData.update_if
-        (fun s -> not s.State.is_unsubscribed)
-        (fun s -> State.set s subscription)
-        state
-    in
-    let was_unsubscribed = old_state.State.is_unsubscribed in
-    if was_unsubscribed then subscription ()
-
-end
-
-(* TODO: refactor *)
-module SingleAssignment = struct
+module Assignable = struct
   module State = struct
     type t = {
       is_unsubscribed: bool;
@@ -220,10 +165,14 @@ module SingleAssignment = struct
 
   type state = State.t RxAtomicData.t
 
-  let create () =
+  let is_unsubscribed state =
+    let s = RxAtomicData.unsafe_get state in
+    s.State.is_unsubscribed
+
+  let create ?subscription () =
     let state = RxAtomicData.create {
       State.is_unsubscribed = false;
-      State.subscription = None;
+      State.subscription = subscription;
     } in
     let unsubscribe_wrapper () =
       let old_state =
@@ -239,11 +188,36 @@ module SingleAssignment = struct
     in
     (unsubscribe_wrapper, state)
 
-  let is_unsubscribed state =
-    (RxAtomicData.unsafe_get state).State.is_unsubscribed
+  let set update state subscription =
+    let old_state = update state in
+    let was_unsubscribed = old_state.State.is_unsubscribed in
+    if was_unsubscribed then subscription ()
+
+end
+
+module MultipleAssignment = struct
+  include Assignable
+
+  let create subscription =
+    create ~subscription ()
 
   let set state subscription =
-    let old_state =
+    set (
+      RxAtomicData.update_if
+        (fun s -> not s.State.is_unsubscribed)
+        (fun s -> State.set s subscription)
+    ) state subscription
+
+end
+
+module SingleAssignment = struct
+  include Assignable
+
+  let create () =
+    create ()
+
+  let set state subscription =
+    set (
       RxAtomicData.update_if
         (fun s -> not s.State.is_unsubscribed)
         (fun s ->
@@ -251,10 +225,7 @@ module SingleAssignment = struct
           | None -> State.set s subscription
           | Some _ ->
               failwith "SingleAssignment")
-        state
-    in
-    let was_unsubscribed = old_state.State.is_unsubscribed in
-    if was_unsubscribed then subscription ()
+    ) state subscription
 
 end
 

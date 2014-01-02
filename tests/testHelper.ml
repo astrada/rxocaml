@@ -1,56 +1,68 @@
 module Observer = struct
-  type 'a state = {
-    mutable completed: bool;
-    mutable error: exn option;
-    mutable on_next_queue: 'a Queue.t;
-  }
+  module ObserverState = struct
+    type 'a state = {
+      completed: bool;
+      error: exn option;
+      on_next_queue: 'a Queue.t;
+    }
 
-  let create () =
-    let state = {
+    let initial_state () = {
       completed = false;
       error = None;
       on_next_queue = Queue.create ();
-    } in
-    let observer =
-      Rx.Observer.create
-        ~on_completed:(fun () ->
-          OUnit2.assert_equal
-            ~msg:"on_completed should be called only once"
-            false state.completed;
-          OUnit2.assert_equal
-            ~msg:"on_completed should not be called after on_error"
-            None state.error;
-          state.completed <- true
-        )
-        ~on_error:(fun e ->
-          OUnit2.assert_equal
-            ~msg:"on_error should not be called after on_completed"
-            false state.completed;
-          OUnit2.assert_equal
-            ~msg:"on_error should be called only once"
-            None state.error;
-          state.error <- Some e
-        )
-        (fun v ->
-          OUnit2.assert_equal
-            ~msg:"on_next should not be called after on_completed"
-            false state.completed;
-          OUnit2.assert_equal
-            ~msg:"on_next should not be called after on_error"
-            None state.error;
-          Queue.add v state.on_next_queue
-        )
-    in
-    (observer, state)
+    }
 
-  let is_completed state = state.completed
+    let on_completed s =
+      OUnit2.assert_equal
+        ~msg:"on_completed should be called only once"
+        false s.completed;
+      OUnit2.assert_equal
+        ~msg:"on_completed should not be called after on_error"
+        None s.error;
+      { s with completed = true }
 
-  let is_on_error state = BatOption.is_some state.error
+    let on_error e s =
+      OUnit2.assert_equal
+        ~msg:"on_error should not be called after on_completed"
+        false s.completed;
+      OUnit2.assert_equal
+        ~msg:"on_error should be called only once"
+        None s.error;
+      { s with error = Some e }
 
-  let get_error state = state.error
+    let on_next v s =
+      OUnit2.assert_equal
+        ~msg:"on_next should not be called after on_completed"
+        false s.completed;
+      OUnit2.assert_equal
+        ~msg:"on_next should not be called after on_error"
+        None s.error;
+      Queue.add v s.on_next_queue;
+      s
+
+  end
+
+  module O = Rx.Observer.MakeObserverWithState(ObserverState)(RxCore.DataRef)
+
+  type 'a state = 'a ObserverState.state RxCore.DataRef.t
+
+  let create = O.create
+
+  let is_completed state =
+    let s = RxCore.DataRef.get state in
+    s.ObserverState.completed
+
+  let is_on_error state =
+    let s = RxCore.DataRef.get state in
+    BatOption.is_some s.ObserverState.error
+
+  let get_error state =
+    let s = RxCore.DataRef.get state in
+    s.ObserverState.error
 
   let on_next_values state =
-    BatList.of_enum @@ BatQueue.enum state.on_next_queue
+    let s = RxCore.DataRef.get state in
+    BatList.of_enum @@ BatQueue.enum s.ObserverState.on_next_queue
 
 end
 

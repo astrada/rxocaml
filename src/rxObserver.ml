@@ -10,6 +10,39 @@ let create
     on_next = 
   (on_completed, on_error, on_next)
 
+module type ObserverState = sig
+
+  type 'a state
+
+  val initial_state : unit -> 'a state
+
+  val on_completed : 'a state -> 'a state
+
+  val on_error : exn -> 'a state -> 'a state
+
+  val on_next : 'a -> 'a state -> 'a state
+
+end
+
+module MakeObserverWithState
+    (O : ObserverState)
+    (D : RxCore.MutableData) = struct
+
+  let create () =
+    let state = D.create @@ O.initial_state () in
+    let update f =
+      let s = D.get state in
+      let s' = f s in
+      D.set s' state
+    in
+    let on_completed () = update O.on_completed in
+    let on_error e = update @@ O.on_error e in
+    let on_next v = update @@ O.on_next v in
+    let observer = create ~on_completed ~on_error on_next in
+    (observer, state)
+
+end
+
 module ObserverBase = struct
   (* Original implementation:
    * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Core/Reactive/ObserverBase.cs
@@ -76,9 +109,10 @@ module SynchronizedObserver = struct
    *)
   let create (on_completed, on_error, on_next) =
     let lock = BatRMutex.create () in
-    let on_completed' () = BatRMutex.synchronize ~lock on_completed () in
-    let on_error' e = BatRMutex.synchronize ~lock on_error e in
-    let on_next' x = BatRMutex.synchronize ~lock on_next x in
+    let with_lock f a = BatRMutex.synchronize ~lock f a in
+    let on_completed' () = with_lock on_completed () in
+    let on_error' e = with_lock on_error e in
+    let on_next' x = with_lock on_next x in
     (on_completed', on_error', on_next')
 
 end
@@ -91,10 +125,10 @@ module AsyncLockObserver = struct
    *)
   let create (on_completed, on_error, on_next) =
     let async_lock = RxAsyncLock.create () in
-    let wrap_action thunk = RxAsyncLock.wait async_lock thunk in
-    let on_completed' () = wrap_action (fun () -> on_completed ()) in
-    let on_error' e = wrap_action (fun () -> on_error e) in
-    let on_next' x = wrap_action (fun () -> on_next x) in
+    let with_lock thunk = RxAsyncLock.wait async_lock thunk in
+    let on_completed' () = with_lock (fun () -> on_completed ()) in
+    let on_error' e = with_lock (fun () -> on_error e) in
+    let on_next' x = with_lock (fun () -> on_next x) in
     ObserverBase.create (on_completed', on_error', on_next')
 
 end
