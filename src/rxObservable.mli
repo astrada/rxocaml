@@ -2,16 +2,10 @@
 
 type +'a observable = 'a RxObserver.observer -> RxSubscription.subscription
 
-type 'a notification =
-  [ `OnCompleted
-  | `OnError of exn
-  | `OnNext of 'a
-  ]
-
 module type O = sig
   val empty : 'a observable
 
-  val materialize : 'a observable -> 'a notification observable
+  val materialize : 'a observable -> 'a RxCore.notification observable
 
   val from_enum : 'a BatEnum.t -> 'a observable
 
