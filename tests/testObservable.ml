@@ -1,23 +1,16 @@
 open OUnit2
 
 let test_from_enum _ =
-  let completed = ref false in
-  let error = ref false in
-  let counter = ref 0 in
   let items = ["one"; "two"; "three"] in
-  let observable = Rx.Observable.CurrentThread.from_enum (BatList.enum items) in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (fun _ -> incr counter) in
+  let observable =
+    Rx.Observable.CurrentThread.from_enum @@ BatList.enum items in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = observable observer in
-  assert_equal 3 !counter;
-  assert_equal true !completed;
-  assert_equal false !error
+  assert_equal items @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_count _ =
-  let result = ref None in
-  let completed = ref false in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next "a";
@@ -26,18 +19,15 @@ let test_count _ =
       on_completed ();
       Rx.Subscription.empty;
     ) in
-  let count_observable = Rx.Observable.CurrentThread.count observable in
-  let observer =
-    Rx.Observer.create
-      ~on_completed:(fun () ->
-        assert_equal false !completed; completed := true
-      )
-      (fun v -> assert_equal None !result; result := Some v) in
+  let count_observable =
+    Rx.Observable.CurrentThread.count observable in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = count_observable observer in
-  assert_equal (Some 3) !result
+  assert_equal [3] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_drop _ =
-  let result = ref "" in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next "a";
@@ -47,13 +37,15 @@ let test_drop _ =
       on_completed ();
       Rx.Subscription.empty;
     ) in
-  let drop_2_observable = Rx.Observable.CurrentThread.drop 2 observable in
-  let observer = Rx.Observer.create (fun v -> result := !result ^ v) in
+  let drop_2_observable =
+    Rx.Observable.CurrentThread.drop 2 observable in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = drop_2_observable observer in
-  assert_equal "cd" !result
+  assert_equal ["c"; "d"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_take _ =
-  let result = ref "" in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next "a";
@@ -64,12 +56,13 @@ let test_take _ =
       Rx.Subscription.empty;
     ) in
   let take_2_observable = Rx.Observable.CurrentThread.take 2 observable in
-  let observer = Rx.Observer.create (fun v -> result := !result ^ v) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = take_2_observable observer in
-  assert_equal "ab" !result
+  assert_equal ["a"; "b"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_take_last _ =
-  let result = ref "" in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next "a";
@@ -81,14 +74,13 @@ let test_take_last _ =
     ) in
   let take_last_2_observable =
     Rx.Observable.CurrentThread.take_last 2 observable in
-  let observer = Rx.Observer.create (fun v -> result := !result ^ v) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = take_last_2_observable observer in
-  assert_equal "cd" !result
+  assert_equal ["c"; "d"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_materialize _ =
-  let result = ref "" in
-  let completed = ref false in
-  let error = ref false in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next "a";
@@ -100,23 +92,18 @@ let test_materialize _ =
     ) in
   let materialized_observable =
     Rx.Observable.CurrentThread.materialize observable in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (function
-      | `OnCompleted -> result := !result ^ "."
-      | `OnError _ -> result := !result ^ "?"
-      | `OnNext v -> result := !result ^ v
-    ) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = materialized_observable observer in
-  assert_equal "abcd." !result;
-  assert_equal true !completed;
-  assert_equal false !error
+  assert_equal [
+    `OnNext "a";
+    `OnNext "b";
+    `OnNext "c";
+    `OnNext "d";
+    `OnCompleted] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_materialize_error _ =
-  let result = ref "" in
-  let completed = ref false in
-  let error = ref false in
   let observable =
     (fun (_, on_error, on_next) ->
       on_next "a";
@@ -128,18 +115,16 @@ let test_materialize_error _ =
     ) in
   let materialized_observable =
     Rx.Observable.CurrentThread.materialize observable in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (function
-      | `OnCompleted -> result := !result ^ "."
-      | `OnError _ -> result := !result ^ "?"
-      | `OnNext v -> result := !result ^ v
-    ) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = materialized_observable observer in
-  assert_equal "abcd?" !result;
-  assert_equal true !completed;
-  assert_equal false !error
+  assert_equal [
+    `OnNext "a";
+    `OnNext "b";
+    `OnNext "c";
+    `OnNext "d";
+    `OnError (Failure "test")] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_to_enum _ =
   let observable =
@@ -174,9 +159,6 @@ let test_to_enum_error _ =
     assert_equal ex e
 
 let test_single _ =
-  let completed = ref false in
-  let error = ref false in
-  let counter = ref 0 in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next 1;
@@ -184,19 +166,13 @@ let test_single _ =
       Rx.Subscription.empty;
     ) in
   let single_observable = Rx.Observable.CurrentThread.single observable in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (fun _ -> incr counter) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = single_observable observer in
-  assert_equal 1 !counter;
-  assert_equal true !completed;
-  assert_equal false !error
+  assert_equal [1] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let test_single_too_many_elements _ =
-  let completed = ref false in
-  let error = ref false in
-  let counter = ref 0 in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_next 1;
@@ -205,33 +181,24 @@ let test_single_too_many_elements _ =
       Rx.Subscription.empty;
     ) in
   let single_observable = Rx.Observable.CurrentThread.single observable in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (fun _ -> incr counter) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = single_observable observer in
-  assert_equal 0 !counter;
-  assert_equal false !completed;
-  assert_equal true !error
+  assert_equal [] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
 
 let test_single_empty _ =
-  let completed = ref false in
-  let error = ref false in
-  let counter = ref 0 in
   let observable =
     (fun (on_completed, _, on_next) ->
       on_completed ();
       Rx.Subscription.empty;
     ) in
   let single_observable = Rx.Observable.CurrentThread.single observable in
-  let observer = Rx.Observer.create
-    ~on_completed:(fun () -> completed := true)
-    ~on_error:(fun _ -> error := true)
-    (fun _ -> incr counter) in
+  let (observer, state) = TestHelper.Observer.create () in
   let _ = single_observable observer in
-  assert_equal 0 !counter;
-  assert_equal false !completed;
-  assert_equal true !error
+  assert_equal [] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
 
 let test_single_blocking _ =
   let observable =
@@ -257,7 +224,8 @@ let test_single_blocking_empty _ =
 
 let test_from_list _ =
   let items = ["one"; "two"; "three"] in
-  let from_list xs = Rx.Observable.CurrentThread.from_enum @@ BatList.enum xs in
+  let from_list xs =
+    Rx.Observable.CurrentThread.from_enum @@ BatList.enum xs in
   assert_equal 3
     Rx.Observable.CurrentThread.(
       items |> from_list |> count |> Blocking.single
