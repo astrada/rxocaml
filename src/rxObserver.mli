@@ -1,16 +1,14 @@
 (* Internal module (see Rx.Observer) *)
 
-type -'a observer = (unit -> unit) * (exn -> unit) * ('a -> unit)
-
 val create :
   ?on_completed:(unit -> unit) ->
   ?on_error:(exn -> unit) ->
   ('a -> unit) ->
-  'a observer
+  'a RxCore.observer
 
-val checked : 'a observer -> 'a observer
+val checked : 'a RxCore.observer -> 'a RxCore.observer
 
-val synchronize : 'a observer -> 'a observer
+val synchronize : 'a RxCore.observer -> 'a RxCore.observer
 
-val synchronize_async_lock : 'a observer -> 'a observer
+val synchronize_async_lock : 'a RxCore.observer -> 'a RxCore.observer
 
