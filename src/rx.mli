@@ -4,44 +4,6 @@
  *)
 
 (**
- Provides a mechanism for receiving push-based notifications.
- 
- An {i observer} is a triple of closures: [(on_completed, on_error, on_next)],
- where:
- - [on_completed: unit -> unit]
- - [on_error: exn -> unit]
- - [on_next: 'a -> unit]
- 
- After an observer calls an observable's subscribe function, the
- observable calls the observer's third closure (on_next) to provide
- notifications. A well-behaved observable will call an observer's first
- closure (on_completed) exactly once or the observer's second closure
- (on_error) exactly once.
- 
- The first closure ([on_completed]) notifies the observer that the provider
- has finished sending push-based notifications. 
- The observable will not call this closure if it calls [on_error].
- 
- The second closure ([on_error]) notifies the observer that the provider has
- experienced an error condition.
- If the observable calls this closure, it will not thereafter call [on_next]
- or [on_completed].
- 
- The third closure ([on_next]) provides the observer with new data. 
- The observable calls this closure 1 or more times, unless it calls
- [on_error] in which case this closure may never be called.
- The observable will not call this closure again after it calls either
- [on_completed] or [on_error].
- 
- For more information see the
- {{:https://github.com/Netflix/RxJava/wiki/Observable}RxJava Wiki}
- *)
-type -'a observer =
-  (* on_completed: *) (unit -> unit) *
-  (* on_error: *) (exn -> unit) *
-  (* on_next: *) ('a -> unit)
-
-(**
  Subscription returns from observable's subscribe function to allow
  unsubscribing.
  
@@ -75,7 +37,7 @@ type subscription =
  {{:https://github.com/Netflix/RxJava/wiki/Observable}RxJava Wiki}
  *)
 type +'a observable =
-  (* subscribe: *) 'a observer -> subscription
+  (* subscribe: *) 'a RxCore.observer -> subscription
 
 (** Provides a set of functions for creating observers. *)
 module Observer : sig
@@ -94,7 +56,7 @@ module Observer : sig
     ?on_completed:(unit -> unit) ->
     ?on_error:(exn -> unit) ->
     ('a -> unit) ->
-    'a observer
+    'a RxCore.observer
 
   (**
    Checks access to the observer for grammar violations. This includes
@@ -103,7 +65,7 @@ module Observer : sig
    If a violation is detected, a [Failure] exception is raised from the
    offending observer call.
    *)
-  val checked : 'a observer -> 'a observer
+  val checked : 'a RxCore.observer -> 'a RxCore.observer
 
   (**
    Synchronizes access to the observer such that its callback functions
@@ -111,7 +73,7 @@ module Observer : sig
    useful when coordinating access to an observer. Notice reentrant observer
    callbacks on the same thread are still possible.
    *)
-  val synchronize : 'a observer -> 'a observer
+  val synchronize : 'a RxCore.observer -> 'a RxCore.observer
 
   (**
    Synchronizes access to the observer such that its callback methods
@@ -119,7 +81,7 @@ module Observer : sig
    against concurrent and reentrant access.  This function is useful when
    coordinating access to an observer.
    *)
-  val synchronize_async_lock : 'a observer -> 'a observer
+  val synchronize_async_lock : 'a RxCore.observer -> 'a RxCore.observer
 
 end
 

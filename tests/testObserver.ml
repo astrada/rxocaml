@@ -2,7 +2,7 @@ open OUnit2
 
 let test_create_on_next _ =
   let next = ref false in
-  let observer : int Rx.observer =
+  let observer : int RxCore.observer =
     Rx.Observer.create (fun x -> assert_equal 42 x; next := true) in
   let (on_completed, _, on_next) = observer in
   on_next 42;
@@ -12,7 +12,7 @@ let test_create_on_next _ =
 let test_create_on_next_has_errors _ =
   let failure = Failure "error" in
   let next = ref false in
-  let observer : int Rx.observer =
+  let observer : int RxCore.observer =
     Rx.Observer.create (fun x -> assert_equal 42 x; next := true) in
   let (_, on_error, on_next) = observer in
   on_next 42;

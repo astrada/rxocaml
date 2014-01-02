@@ -1,7 +1,7 @@
 module Observer : sig
   type 'a state
 
-  val create : unit -> 'a Rx.observer * 'a state
+  val create : unit -> 'a RxCore.observer * 'a state
 
   val is_completed : 'a state -> bool
 
