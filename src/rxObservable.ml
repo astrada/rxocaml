@@ -10,6 +10,9 @@ module type O = sig
   val materialize :
     'a RxCore.observable -> 'a RxCore.notification RxCore.observable
 
+  val dematerialize :
+    'a RxCore.notification RxCore.observable -> 'a RxCore.observable
+
   val from_enum : 'a BatEnum.t -> 'a RxCore.observable
 
   val to_enum : 'a RxCore.observable -> 'a BatEnum.t
@@ -56,6 +59,24 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
             on_next (RxCore.OnError e);
             on_completed ())
           (fun v -> on_next (RxCore.OnNext v))
+      in
+      observable materialize_observer
+    )
+
+  let dematerialize observable =
+    (* Implementation based on:
+     * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationDematerialize.java
+     *)
+    (fun (on_completed, on_error, on_next) ->
+      let materialize_observer =
+        RxObserver.create
+          ~on_completed:ignore
+          ~on_error:ignore
+          (function
+            | RxCore.OnCompleted -> on_completed ()
+            | RxCore.OnError e -> on_error e
+            | RxCore.OnNext v -> on_next v
+          )
       in
       observable materialize_observer
     )

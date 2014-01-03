@@ -6,6 +6,9 @@ module type O = sig
   val materialize :
     'a RxCore.observable -> 'a RxCore.notification RxCore.observable
 
+  val dematerialize :
+    'a RxCore.notification RxCore.observable -> 'a RxCore.observable
+
   val from_enum : 'a BatEnum.t -> 'a RxCore.observable
 
   val to_enum : 'a RxCore.observable -> 'a BatEnum.t

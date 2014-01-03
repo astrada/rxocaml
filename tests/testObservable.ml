@@ -110,7 +110,7 @@ let test_materialize_error _ =
       on_next "b";
       on_next "c";
       on_next "d";
-      on_error (Failure "test");
+      on_error @@ Failure "test";
       Rx.Subscription.empty;
     ) in
   let materialized_observable =
@@ -127,6 +127,44 @@ let test_materialize_error _ =
   assert_equal true @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
+let test_dematerialize _ =
+  let observable =
+    (fun (on_completed, _, on_next) ->
+      on_next @@ RxCore.OnNext "a";
+      on_next @@ RxCore.OnNext "b";
+      on_next @@ RxCore.OnNext "c";
+      on_next @@ RxCore.OnNext "d";
+      on_next RxCore.OnCompleted;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let dematerialized_observable =
+    Rx.Observable.CurrentThread.dematerialize observable in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = dematerialized_observable observer in
+  assert_equal ["a"; "b"; "c"; "d"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
+let test_dematerialize_error _ =
+  let observable =
+    (fun (on_completed, _, on_next) ->
+      on_next @@ RxCore.OnNext "a";
+      on_next @@ RxCore.OnNext "b";
+      on_next @@ RxCore.OnNext "c";
+      on_next @@ RxCore.OnNext "d";
+      on_next @@ RxCore.OnError (Failure "test");
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let dematerialized_observable =
+    Rx.Observable.CurrentThread.dematerialize observable in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = dematerialized_observable observer in
+  assert_equal ["a"; "b"; "c"; "d"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
+
 let test_to_enum _ =
   let observable =
     (fun (on_completed, _, on_next) ->
@@ -139,7 +177,7 @@ let test_to_enum _ =
     ) in
   let enum = Rx.Observable.CurrentThread.to_enum observable in
   let xs = BatList.of_enum enum in
-  assert_equal [1;2;3;4] xs
+  assert_equal [1; 2; 3; 4] xs
 
 let test_to_enum_error _ =
   let ex = Failure "test" in
@@ -248,6 +286,8 @@ let suite = "Observable tests" >:::
    "test_take_last" >:: test_take_last;
    "test_materialize" >:: test_materialize;
    "test_materialize_error" >:: test_materialize_error;
+   "test_dematerialize" >:: test_dematerialize;
+   "test_dematerialize_error" >:: test_dematerialize_error;
    "test_to_enum" >:: test_to_enum;
    "test_to_enum_error" >:: test_to_enum_error;
    "test_single" >:: test_single;
