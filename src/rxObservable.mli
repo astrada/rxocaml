@@ -23,6 +23,9 @@ module type O = sig
   
   val single : 'a RxCore.observable -> 'a RxCore.observable
 
+  val append :
+    'a RxCore.observable -> 'a RxCore.observable -> 'a RxCore.observable
+
   module Blocking : sig
     val single : 'a RxCore.observable -> 'a
 

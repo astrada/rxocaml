@@ -27,6 +27,9 @@ module type O = sig
 
   val single : 'a RxCore.observable -> 'a RxCore.observable
 
+  val append :
+    'a RxCore.observable -> 'a RxCore.observable -> 'a RxCore.observable
+
   module Blocking : sig
     val single : 'a RxCore.observable -> 'a
 
@@ -284,6 +287,18 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
       let result = observable single_observer in
       RxSubscription.SingleAssignment.set subscription result;
       result
+    )
+
+  let append o1 o2 =
+    (fun ((on_completed, on_error, on_next) as o2_observer) ->
+      let o1_observer =
+        RxObserver.create
+          ~on_completed:(fun () ->
+            ignore @@ o2 o2_observer
+          )
+          ~on_error
+          on_next in
+      o1 o1_observer
     )
 
   module Blocking = struct

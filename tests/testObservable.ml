@@ -278,6 +278,50 @@ let test_from_list _ =
       items |> from_list |> take_last 1 |> Blocking.single
     )
 
+let test_append _ =
+  let o1 =
+    (fun (on_completed, _, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let o2 =
+    (fun (on_completed, _, on_next) ->
+      on_next 3;
+      on_next 4;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let append_observable = Rx.Observable.CurrentThread.append o1 o2 in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = append_observable observer in
+  assert_equal [1; 2; 3; 4] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
+let test_append_error _ =
+  let o1 =
+    (fun (_, on_error, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_error @@ Failure "test";
+      Rx.Subscription.empty;
+    ) in
+  let o2 =
+    (fun (on_completed, _, on_next) ->
+      on_next 3;
+      on_next 4;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let append_observable = Rx.Observable.CurrentThread.append o1 o2 in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = append_observable observer in
+  assert_equal [1; 2] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
+
 let suite = "Observable tests" >:::
   ["test_from_enum" >:: test_from_enum;
    "test_count" >:: test_count;
@@ -296,5 +340,7 @@ let suite = "Observable tests" >:::
    "test_single_blocking" >:: test_single_blocking;
    "test_single_blocking_empty" >:: test_single_blocking_empty;
    "test_from_list" >:: test_from_list;
+   "test_append" >:: test_append;
+   "test_append_error" >:: test_append_error;
   ]
 
