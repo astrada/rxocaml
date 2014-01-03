@@ -30,6 +30,16 @@ module type O = sig
   val append :
     'a RxCore.observable -> 'a RxCore.observable -> 'a RxCore.observable
 
+  val merge : 'a RxCore.observable RxCore.observable -> 'a RxCore.observable
+
+  val map : ('a -> 'b) -> 'a RxCore.observable -> 'b RxCore.observable
+
+  val return : 'a -> 'a RxCore.observable
+
+  val bind :
+    'a RxCore.observable -> ('a -> 'b RxCore.observable) ->
+    'b RxCore.observable
+
   module Blocking : sig
     val single : 'a RxCore.observable -> 'a
 
@@ -182,7 +192,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
       end else begin
         let counter = RxAtomicData.create 0 in
         let error = ref false in
-        let (subscription, state) =
+        let (unsubscribe, subscription_state) =
           RxSubscription.SingleAssignment.create () in
         let take_observer =
           let on_completed_wrapper () =
@@ -204,15 +214,15 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
                   with e ->
                     error := true;
                     on_error e;
-                    subscription ()
+                    unsubscribe ()
                   end;
                   if not !error && count = n then on_completed ()
                 end;
-                if not !error && count >= n then subscription ()
+                if not !error && count >= n then unsubscribe ()
               end
             ) in
         let result = observable take_observer in
-        RxSubscription.SingleAssignment.set state result;
+        RxSubscription.SingleAssignment.set subscription_state result;
         result
       end)
 
@@ -222,7 +232,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
      *)
     (fun (on_completed, on_error, on_next) ->
       let queue = Queue.create () in
-      let (unsubscribe, subscription) =
+      let (unsubscribe, subscription_state) =
         RxSubscription.SingleAssignment.create () in
       let take_last_observer =
         RxObserver.create
@@ -249,7 +259,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
           )
       in
       let result = observable take_last_observer in
-      RxSubscription.SingleAssignment.set subscription result;
+      RxSubscription.SingleAssignment.set subscription_state result;
       result
     )
 
@@ -260,7 +270,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
     (fun (on_completed, on_error, on_next) ->
       let value = ref None in
       let has_too_many_elements = ref false in
-      let (unsubscribe, subscription) =
+      let (unsubscribe, subscription_state) =
         RxSubscription.SingleAssignment.create () in
       let single_observer =
         RxObserver.create
@@ -285,7 +295,7 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
           )
       in
       let result = observable single_observer in
-      RxSubscription.SingleAssignment.set subscription result;
+      RxSubscription.SingleAssignment.set subscription_state result;
       result
     )
 
@@ -297,9 +307,88 @@ module MakeObservable(Scheduler : RxScheduler.S) = struct
             ignore @@ o2 o2_observer
           )
           ~on_error
-          on_next in
+          on_next
+      in
       o1 o1_observer
     )
+
+  let merge observables =
+    (* Implementation based on:
+     * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationMerge.java
+     *)
+    (fun actual_observer ->
+      let (on_completed, on_error, on_next) =
+        RxObserver.synchronize actual_observer in
+      let (unsubscribe, subscription_state) =
+        RxSubscription.Composite.create [] in
+      let is_stopped = RxAtomicData.create false in
+      let child_counter = RxAtomicData.create 0 in
+      let parent_completed = ref false in
+      let stop () =
+        let was_stopped =
+          RxAtomicData.compare_and_set false true is_stopped in
+        if not was_stopped then unsubscribe ();
+        was_stopped in
+      let stop_if_and_do cond thunk =
+        if not (RxAtomicData.get is_stopped) && cond then begin
+          let was_stopped = stop () in
+          if not was_stopped then thunk ()
+        end in
+      let child_observer =
+        RxObserver.create
+          ~on_completed:(fun () ->
+            let count = RxAtomicData.update_and_get pred child_counter in
+            stop_if_and_do (count = 0 && !parent_completed) on_completed
+          )
+          ~on_error:(fun e ->
+            stop_if_and_do true (fun () -> on_error e)
+          )
+          (fun v ->
+            if not (RxAtomicData.get is_stopped) then on_next v
+          ) in
+      let parent_observer =
+        RxObserver.create
+          ~on_completed:(fun () ->
+            parent_completed := true;
+            let count = RxAtomicData.get child_counter in
+            stop_if_and_do (count = 0) on_completed
+          )
+          ~on_error
+          (fun observable ->
+            if not (RxAtomicData.get is_stopped) then begin
+              RxAtomicData.update succ child_counter;
+              let child_subscription = observable child_observer in
+              RxSubscription.Composite.add
+                subscription_state child_subscription
+            end
+          ) in
+      let parent_subscription = observables parent_observer in
+      let (subscription, _) =
+        RxSubscription.Composite.create [parent_subscription; unsubscribe]
+      in
+      subscription
+    )
+
+  let map f observable =
+    (fun (on_completed, on_error, on_next) ->
+      let map_observer =
+        RxObserver.create
+          ~on_completed
+          ~on_error
+          (fun v -> on_next @@ f v) 
+      in
+      observable map_observer
+    )
+
+  let return v =
+    (fun (on_completed, on_error, on_next) ->
+      on_next v;
+      on_completed ();
+      RxSubscription.empty
+    )
+
+  let bind observable f =
+    map f observable |> merge
 
   module Blocking = struct
   (* Implementation based on:

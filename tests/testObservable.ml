@@ -322,6 +322,143 @@ let test_append_error _ =
   assert_equal false @@ TestHelper.Observer.is_completed state;
   assert_equal true @@ TestHelper.Observer.is_on_error state
 
+let test_map _ =
+  let observable =
+    (fun (on_completed, _, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_next 3;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let map_observable =
+    Rx.Observable.CurrentThread.map (fun x -> x * 2) observable in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = map_observable observer in
+  assert_equal [2; 4; 6] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
+let test_return _ =
+  let observable = Rx.Observable.CurrentThread.return 42 in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = observable observer in
+  assert_equal [42] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
+let test_merge_synchronous _ =
+  let o1 =
+    (fun (on_completed, _, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let o2 =
+    (fun (on_completed, _, on_next) ->
+      on_next 3;
+      on_next 4;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let o =
+    (fun (on_completed, _, on_next) ->
+      on_next o1;
+      on_next o2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let merge_observable = Rx.Observable.CurrentThread.merge o in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = merge_observable observer in
+  assert_equal [1; 2; 3; 4] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
+let test_merge_child_error_synchronous _ =
+  let o1 =
+    (fun (on_completed, _, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let o2 =
+    (fun (_, on_error, on_next) ->
+      on_next 3;
+      on_next 4;
+      on_error @@ Failure "test";
+      Rx.Subscription.empty;
+    ) in
+  let o =
+    (fun (on_completed, _, on_next) ->
+      on_next o1;
+      on_next o2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let merge_observable = Rx.Observable.CurrentThread.merge o in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = merge_observable observer in
+  assert_equal [1; 2; 3; 4] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
+
+let test_merge_parent_error_synchronous _ =
+  let o1 =
+    (fun (on_completed, _, on_next) ->
+      on_next 1;
+      on_next 2;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let o =
+    (fun (_, on_error, on_next) ->
+      on_next o1;
+      on_error @@ Failure "test";
+      Rx.Subscription.empty;
+    ) in
+  let merge_observable = Rx.Observable.CurrentThread.merge o in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = merge_observable observer in
+  assert_equal [1; 2] @@ TestHelper.Observer.on_next_values state;
+  assert_equal false @@ TestHelper.Observer.is_completed state;
+  assert_equal true @@ TestHelper.Observer.is_on_error state
+
+let test_bind _ =
+  let f v =
+    (fun (on_completed, _, on_next) ->
+      begin match v with
+      | 42 ->
+          on_next "42";
+          on_next "Answer to the Ultimate Question of Life, \
+                   the Universe, and Everything"
+      | n ->
+          on_next @@ string_of_int n
+      end;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let observable =
+    (fun (on_completed, _, on_next) ->
+      on_next 41;
+      on_next 42;
+      on_next 43;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let bind_observable = Rx.Observable.CurrentThread.bind observable f in
+  let (observer, state) = TestHelper.Observer.create () in
+  let _ = bind_observable observer in
+  assert_equal [
+    "41";
+    "42";
+    "Answer to the Ultimate Question of Life, the Universe, and Everything";
+    "43"] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
 let suite = "Observable tests" >:::
   ["test_from_enum" >:: test_from_enum;
    "test_count" >:: test_count;
@@ -342,5 +479,13 @@ let suite = "Observable tests" >:::
    "test_from_list" >:: test_from_list;
    "test_append" >:: test_append;
    "test_append_error" >:: test_append_error;
+   "test_map" >:: test_map;
+   "test_return" >:: test_return;
+   "test_merge_synchronous" >:: test_merge_synchronous;
+   "test_merge_child_error_synchronous" >::
+     test_merge_child_error_synchronous;
+   "test_merge_parent_error_synchronous" >::
+     test_merge_parent_error_synchronous;
+   "test_bind" >:: test_bind;
   ]
 
