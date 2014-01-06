@@ -94,7 +94,7 @@ let test_current_thread_cancel _ =
   assert_equal ~msg:"ran1" true !ran1;
   assert_equal ~msg:"ran2" false !ran2
 
-let test_cts_schedule_nested_actions _ =
+let test_current_thread_schedule_nested_actions _ =
   let queue = Queue.create () in
   let first_step_start () = Queue.add "first_step_start" queue in
   let first_step_end () = Queue.add "first_step_end" queue in
@@ -144,22 +144,75 @@ let test_current_thread_schedule_recursion _ =
   in
   assert_equal count !counter
 
+let test_immediate_schedule_action _ =
+  let id = Utils.current_thread_id () in
+  let ran = ref false in
+  let _ = Rx.Scheduler.Immediate.schedule_absolute
+    (fun () ->
+      assert_equal id (Utils.current_thread_id ());
+      ran := true;
+      Rx.Subscription.empty) in
+  assert_bool "ran should be true" !ran
+
+let test_immediate_schedule_nested_actions _ =
+  let queue = Queue.create () in
+  let first_step_start () = Queue.add "first_step_start" queue in
+  let first_step_end () = Queue.add "first_step_end" queue in
+  let second_step_start () = Queue.add "second_step_start" queue in
+  let second_step_end () = Queue.add "second_step_end" queue in
+  let third_step_start () = Queue.add "third_step_start" queue in
+  let third_step_end () = Queue.add "third_step_end" queue in
+  let first_action () =
+    first_step_start ();
+    first_step_end ();
+    Rx.Subscription.empty;
+  in
+  let second_action () =
+    second_step_start ();
+    let s = Rx.Scheduler.Immediate.schedule_absolute first_action in
+    second_step_end ();
+    s
+  in
+  let third_action () =
+    third_step_start ();
+    let s = Rx.Scheduler.Immediate.schedule_absolute second_action in
+    third_step_end ();
+    s
+  in
+  let _ = Rx.Scheduler.Immediate.schedule_absolute third_action in
+  let in_order = BatQueue.enum queue |> BatList.of_enum in
+  assert_equal
+    ~printer:(fun xs ->
+      BatPrintf.sprintf2 "%a" (BatList.print BatString.print) xs)
+    ["third_step_start";
+     "second_step_start";
+     "first_step_start";
+     "first_step_end";
+     "second_step_end";
+     "third_step_end"]
+    in_order
+
 let suite = "Scheduler tests" >:::
   ["test_current_thread_schedule_action" >::
-    test_current_thread_schedule_action;
+     test_current_thread_schedule_action;
    "test_current_thread_schedule_action_error" >::
-    test_current_thread_schedule_action_error;
+     test_current_thread_schedule_action_error;
    "test_current_thread_schedule_action_nested" >::
-    test_current_thread_schedule_action_nested;
+     test_current_thread_schedule_action_nested;
    "test_current_thread_schedule_relative_action_nested" >::
-    test_current_thread_schedule_relative_action_nested;
+     test_current_thread_schedule_relative_action_nested;
    "test_current_thread_schedule_relative_action_due" >::
-    test_current_thread_schedule_relative_action_due;
+     test_current_thread_schedule_relative_action_due;
    "test_current_thread_schedule_relative_action_due_nested" >::
-    test_current_thread_schedule_relative_action_due_nested;
+     test_current_thread_schedule_relative_action_due_nested;
    "test_current_thread_cancel" >:: test_current_thread_cancel;
-   "test_cts_schedule_nested_actions" >:: test_cts_schedule_nested_actions;
+   "test_current_thread_schedule_nested_actions" >::
+     test_current_thread_schedule_nested_actions;
    "test_current_thread_schedule_recursion" >::
-    test_current_thread_schedule_recursion;
+     test_current_thread_schedule_recursion;
+   "test_immediate_schedule_action" >::
+     test_immediate_schedule_action;
+   "test_immediate_schedule_nested_actions" >::
+     test_immediate_schedule_nested_actions;
   ]
 

@@ -7,18 +7,20 @@
 module type Base = sig
   type t
 
+  val now : unit -> float
+
   val schedule_absolute :
     ?due_time:float -> (unit -> RxCore.subscription) ->
-    RxCore.subscription
-
-  val schedule_relative :
-    float -> (unit -> RxCore.subscription) ->
     RxCore.subscription
 
 end
 
 module type S = sig
   include Base
+
+  val schedule_relative :
+    float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
 
   val schedule_recursive :
     ((unit -> RxCore.subscription) -> RxCore.subscription) ->
@@ -28,6 +30,10 @@ end
 
 module MakeScheduler(BaseScheduler : Base) = struct
   include BaseScheduler
+
+  let schedule_relative delay action =
+    let due_time = BaseScheduler.now () +. delay in
+    BaseScheduler.schedule_absolute ~due_time action
 
   let schedule_recursive cont =
     let open RxSubscription in
@@ -50,20 +56,6 @@ module MakeScheduler(BaseScheduler : Base) = struct
     parent_subscription
 
 end
-
-let now () = Unix.gettimeofday ()
-
-(* val create_sleeping_action :
- *   (unit -> RxCore.subscription) -> float ->
- *   (unit -> RxCore.subscription)
- *)
-let create_sleeping_action action exec_time =
-  (fun () ->
-    if exec_time > now () then begin
-      let delay = exec_time -. (now ()) in
-      if delay > 0.0 then Thread.delay delay;
-    end;
-    action ())
 
 module DiscardableAction = struct
   type t = {
@@ -128,6 +120,16 @@ module CurrentThreadBase = struct
     queue_table = Hashtbl.create 16;
     counter = 0;
   }
+
+  let now () = Unix.gettimeofday ()
+
+  let create_sleeping_action action exec_time =
+    (fun () ->
+      if exec_time > now () then begin
+        let delay = exec_time -. (now ()) in
+        if delay > 0.0 then Thread.delay delay;
+      end;
+      action ())
 
   let get_queue state =
     let tid = Utils.current_thread_id () in
@@ -195,11 +197,35 @@ module CurrentThreadBase = struct
     enqueue discardable_action exec_time;
     unsubscribe
 
-  let schedule_relative delay action =
-    let due_time = now () +. delay in
-    schedule_absolute ~due_time action
-
 end
 
 module CurrentThread = MakeScheduler(CurrentThreadBase)
+
+module ImmediateBase = struct
+  (* Implementation based on:
+   * /usr/local/src/RxJava/rxjava-core/src/main/java/rx/schedulers/ImmediateScheduler.java
+   *)
+  type t = unit
+
+  let now () = Unix.gettimeofday ()
+
+  let create_sleeping_action action exec_time =
+    (fun () ->
+      if exec_time > now () then begin
+        let delay = exec_time -. (now ()) in
+        if delay > 0.0 then Thread.delay delay;
+      end;
+      action ())
+
+  let schedule_absolute ?due_time action =
+    let (exec_time, action') =
+      match due_time with
+      | None -> (now (), action)
+      | Some dt -> (dt, create_sleeping_action action dt) in
+    action' ()
+
+end
+
+module Immediate = MakeScheduler(ImmediateBase)
+
 
