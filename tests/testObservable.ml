@@ -480,6 +480,35 @@ let test_never _ =
   assert_equal false @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
+let test_subscribe_on_this _ =
+  let (observer, state) = TestHelper.Observer.create () in
+  let schedule_count = ref 0 in
+  let module Scheduler = struct
+    type t = unit
+    let now () = 0.0
+    let schedule_absolute ?due_time action =
+      incr schedule_count;
+      Rx.Scheduler.Immediate.schedule_absolute ?due_time action
+    let schedule_relative _ _ = Rx.Subscription.empty
+    let schedule_recursive _ = Rx.Subscription.empty
+  end in
+  let module ScheduledObservable = Rx.Observable.MakeScheduled(Scheduler) in
+  let observable =
+    (fun (on_completed, _, on_next) ->
+      on_next 42;
+      on_completed ();
+      Rx.Subscription.empty;
+    ) in
+  let scheduled_observable =
+    ScheduledObservable.subscribe_on_this observable in
+  let unsubscribe = scheduled_observable observer in
+  assert_equal 1 !schedule_count;
+  unsubscribe ();
+  assert_equal 2 !schedule_count;
+  assert_equal [42] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
 let suite = "Observable tests" >:::
   ["test_from_enum" >:: test_from_enum;
    "test_count" >:: test_count;
@@ -511,5 +540,6 @@ let suite = "Observable tests" >:::
    "test_empty" >:: test_empty;
    "test_error" >:: test_error;
    "test_never" >:: test_never;
+   "test_subscribe_on_this" >:: test_subscribe_on_this;
   ]
 

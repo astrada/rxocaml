@@ -21,6 +21,13 @@ let never =
     RxSubscription.empty
   )
 
+let return v =
+  (fun (on_completed, on_error, on_next) ->
+    on_next v;
+    on_completed ();
+    RxSubscription.empty
+  )
+
 let materialize observable =
   (* Implementation based on:
    * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationMaterialize.java
@@ -324,13 +331,6 @@ let map f observable =
     observable map_observer
   )
 
-let return v =
-  (fun (on_completed, on_error, on_next) ->
-    on_next v;
-    on_completed ();
-    RxSubscription.empty
-  )
-
 let bind observable f =
   map f observable |> merge
 
@@ -346,33 +346,26 @@ module Blocking = struct
 end
 
 module type Scheduled = sig
-  val empty : 'a RxCore.observable
-
-  val error : exn -> 'a RxCore.observable
+  val subscribe_on_this : 'a RxCore.observable -> 'a RxCore.observable
 
   val from_enum : 'a BatEnum.t -> 'a RxCore.observable
-
-  val return : 'a -> 'a RxCore.observable
 
 end
 
 module MakeScheduled(Scheduler : RxScheduler.S) = struct
-
-  let empty =
-    (fun (on_completed, _, _) ->
+  let subscribe_on_this observable =
+    (fun observer ->
       Scheduler.schedule_absolute
         (fun () ->
-          on_completed ();
-          RxSubscription.empty
-        )
-    )
-
-  let error e =
-    (fun (_, on_error, _) ->
-      Scheduler.schedule_absolute
-        (fun () ->
-          on_error e;
-          RxSubscription.empty
+          let unsubscribe = observable observer in
+          RxSubscription.create
+            (fun () ->
+              ignore @@ Scheduler.schedule_absolute
+                (fun () ->
+                  unsubscribe();
+                  RxSubscription.empty
+                )
+            )
         )
     )
 
@@ -395,17 +388,9 @@ module MakeScheduled(Scheduler : RxScheduler.S) = struct
         )
     )
 
-  let return v =
-    (fun (on_completed, on_error, on_next) ->
-      Scheduler.schedule_absolute
-        (fun () ->
-          on_next v;
-          on_completed ();
-          RxSubscription.empty
-        )
-    )
-
 end
 
 module CurrentThread = MakeScheduled(RxScheduler.CurrentThread)
+
+module Immediate = MakeScheduled(RxScheduler.Immediate)
 

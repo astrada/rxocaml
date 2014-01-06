@@ -6,6 +6,8 @@ val error : exn -> 'a RxCore.observable
 
 val never : 'a RxCore.observable
 
+val return : 'a -> 'a RxCore.observable
+
 val materialize :
   'a RxCore.observable -> 'a RxCore.notification RxCore.observable
 
@@ -31,8 +33,6 @@ val merge : 'a RxCore.observable RxCore.observable -> 'a RxCore.observable
 
 val map : ('a -> 'b) -> 'a RxCore.observable -> 'b RxCore.observable
 
-val return : 'a -> 'a RxCore.observable
-
 val bind :
   'a RxCore.observable -> ('a -> 'b RxCore.observable) ->
   'b RxCore.observable
@@ -43,14 +43,9 @@ module Blocking : sig
 end
 
 module type Scheduled = sig
-
-  val empty : 'a RxCore.observable
-
-  val error : exn -> 'a RxCore.observable
+  val subscribe_on_this : 'a RxCore.observable -> 'a RxCore.observable
 
   val from_enum : 'a BatEnum.t -> 'a RxCore.observable
-
-  val return : 'a -> 'a RxCore.observable
 
 end
 
@@ -58,4 +53,6 @@ module MakeScheduled :
   functor(Scheduler : RxScheduler.S) -> Scheduled
 
 module CurrentThread : Scheduled
+
+module Immediate : Scheduled
 
