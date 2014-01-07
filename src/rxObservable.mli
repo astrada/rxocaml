@@ -56,3 +56,5 @@ module CurrentThread : Scheduled
 
 module Immediate : Scheduled
 
+module NewThread : Scheduled
+

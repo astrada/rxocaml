@@ -195,9 +195,14 @@ module Scheduler : sig
   module CurrentThread : S
 
   (**
-    Executes work immediately on the current thread.
-    *)
+   Executes work immediately on the current thread.
+   *)
   module Immediate : S
+
+  (**
+   Schedules work on a new thread.
+   *)
+  module NewThread : S
 
 end
 
@@ -258,6 +263,8 @@ module Observable : sig
   module CurrentThread : Scheduled
 
   module Immediate : Scheduled
+
+  module NewThread : Scheduled
 
 end
 

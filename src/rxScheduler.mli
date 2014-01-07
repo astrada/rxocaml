@@ -31,3 +31,5 @@ module CurrentThread : S
 
 module Immediate : S
 
+module NewThread : S
+

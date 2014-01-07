@@ -57,6 +57,14 @@ module MakeScheduler(BaseScheduler : Base) = struct
 
 end
 
+let create_sleeping_action action exec_time now =
+  (fun () ->
+    if exec_time > now () then begin
+      let delay = exec_time -. (now ()) in
+      if delay > 0.0 then Thread.delay delay;
+    end;
+    action ())
+
 module DiscardableAction = struct
   type t = {
     ready: bool;
@@ -123,14 +131,6 @@ module CurrentThreadBase = struct
 
   let now () = Unix.gettimeofday ()
 
-  let create_sleeping_action action exec_time =
-    (fun () ->
-      if exec_time > now () then begin
-        let delay = exec_time -. (now ()) in
-        if delay > 0.0 then Thread.delay delay;
-      end;
-      action ())
-
   let get_queue state =
     let tid = Utils.current_thread_id () in
     let queue_table = state.queue_table in
@@ -192,7 +192,7 @@ module CurrentThreadBase = struct
     let (exec_time, action') =
       match due_time with
       | None -> (now (), action)
-      | Some dt -> (dt, create_sleeping_action action dt) in
+      | Some dt -> (dt, create_sleeping_action action dt now) in
     let (discardable_action, unsubscribe) = DiscardableAction.create action' in
     enqueue discardable_action exec_time;
     unsubscribe
@@ -209,23 +209,35 @@ module ImmediateBase = struct
 
   let now () = Unix.gettimeofday ()
 
-  let create_sleeping_action action exec_time =
-    (fun () ->
-      if exec_time > now () then begin
-        let delay = exec_time -. (now ()) in
-        if delay > 0.0 then Thread.delay delay;
-      end;
-      action ())
-
   let schedule_absolute ?due_time action =
     let (exec_time, action') =
       match due_time with
       | None -> (now (), action)
-      | Some dt -> (dt, create_sleeping_action action dt) in
+      | Some dt -> (dt, create_sleeping_action action dt now) in
     action' ()
 
 end
 
 module Immediate = MakeScheduler(ImmediateBase)
 
+module NewThreadBase = struct
+  (* Implementation based on:
+   * /usr/local/src/RxJava/rxjava-core/src/main/java/rx/schedulers/ImmediateScheduler.java
+   *)
+  type t = unit
+
+  let now () = Unix.gettimeofday ()
+
+  let schedule_absolute ?due_time action =
+    let (exec_time, action') =
+      match due_time with
+      | None -> (now (), action)
+      | Some dt -> (dt, create_sleeping_action action dt now) in
+    let (discardable_action, unsubscribe) = DiscardableAction.create action' in
+    let _ = Thread.create discardable_action () in
+    unsubscribe
+
+end
+
+module NewThread = MakeScheduler(NewThreadBase)
 

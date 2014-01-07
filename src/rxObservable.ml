@@ -394,3 +394,5 @@ module CurrentThread = MakeScheduled(RxScheduler.CurrentThread)
 
 module Immediate = MakeScheduled(RxScheduler.Immediate)
 
+module NewThread = MakeScheduled(RxScheduler.NewThread)
+

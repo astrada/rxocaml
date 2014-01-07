@@ -7,7 +7,8 @@ let test_current_thread_schedule_action _ =
     (fun () ->
       assert_equal id (Utils.current_thread_id ());
       ran := true;
-      Rx.Subscription.empty) in
+      Rx.Subscription.empty
+    ) in
   assert_bool "ran should be true" !ran
 
 let test_current_thread_schedule_action_error _ =
@@ -28,7 +29,9 @@ let test_current_thread_schedule_action_nested _ =
       Rx.Scheduler.CurrentThread.schedule_absolute
         (fun () ->
           ran := true;
-          Rx.Subscription.empty)) in
+          Rx.Subscription.empty
+        )
+    ) in
   assert_bool "ran should be true" !ran
 
 let test_current_thread_schedule_relative_action_nested _ =
@@ -40,7 +43,9 @@ let test_current_thread_schedule_relative_action_nested _ =
       Rx.Scheduler.CurrentThread.schedule_relative 0.1
         (fun () ->
           ran := true;
-          Rx.Subscription.empty)) in
+          Rx.Subscription.empty
+        )
+    ) in
   assert_bool "ran should be true" !ran
 
 let test_current_thread_schedule_relative_action_due _ =
@@ -53,7 +58,8 @@ let test_current_thread_schedule_relative_action_due _ =
       stop := Unix.gettimeofday ();
       assert_equal id (Utils.current_thread_id ());
       ran := true;
-      Rx.Subscription.empty) in
+      Rx.Subscription.empty
+    ) in
   assert_bool "ran should be true" !ran;
   let elapsed = !stop -. start in
   assert_bool "Elapsed time should be > 80ms" (elapsed > 0.08)
@@ -68,7 +74,9 @@ let test_current_thread_schedule_relative_action_due_nested _ =
         (fun () ->
           stop := Unix.gettimeofday ();
           ran := true;
-          Rx.Subscription.empty)) in
+          Rx.Subscription.empty
+        )
+    ) in
   assert_bool "ran should be true" !ran;
   let elapsed = !stop -. start in
   assert_bool "Elapsed time should be > 180ms" (elapsed > 0.18)
@@ -81,13 +89,13 @@ let test_current_thread_cancel _ =
       RxScheduler.CurrentThread.schedule_absolute
         (fun () ->
           ran1 := true;
-          let s = Rx.Scheduler.CurrentThread.schedule_relative 1.0
+          let unsubscribe = Rx.Scheduler.CurrentThread.schedule_relative 1.0
             (fun () ->
               ran2 := true;
               Rx.Subscription.empty
             )
           in
-          s ();
+          unsubscribe ();
           Rx.Subscription.empty
         );
     ) in
@@ -151,7 +159,8 @@ let test_immediate_schedule_action _ =
     (fun () ->
       assert_equal id (Utils.current_thread_id ());
       ran := true;
-      Rx.Subscription.empty) in
+      Rx.Subscription.empty
+    ) in
   assert_bool "ran should be true" !ran
 
 let test_immediate_schedule_nested_actions _ =
@@ -192,6 +201,30 @@ let test_immediate_schedule_nested_actions _ =
      "third_step_end"]
     in_order
 
+let test_new_thread_schedule_action _ =
+  let id = Utils.current_thread_id () in
+  let ran = ref false in
+  let _ = Rx.Scheduler.NewThread.schedule_absolute
+    (fun () ->
+      assert_bool
+        "New thread scheduler should create schedule work on a different thread"
+        (id <> (Utils.current_thread_id ()));
+      ran := true;
+      Rx.Subscription.empty
+    ) in
+  (* Wait for the other thread to run *)
+  Thread.delay 0.1;
+  assert_bool "ran should be true" !ran
+
+let test_new_thread_cancel_action _ =
+  let unsubscribe = Rx.Scheduler.NewThread.schedule_absolute
+    (fun () ->
+      assert_failure "This action should not run"
+    ) in
+  unsubscribe ();
+  (* Wait for the other thread *)
+  Thread.delay 0.1
+
 let suite = "Scheduler tests" >:::
   ["test_current_thread_schedule_action" >::
      test_current_thread_schedule_action;
@@ -214,5 +247,7 @@ let suite = "Scheduler tests" >:::
      test_immediate_schedule_action;
    "test_immediate_schedule_nested_actions" >::
      test_immediate_schedule_nested_actions;
+   "test_new_thread_schedule_action" >:: test_new_thread_schedule_action;
+   "test_new_thread_cancel_action" >:: test_new_thread_cancel_action;
   ]
 
