@@ -204,6 +204,11 @@ module Scheduler : sig
    *)
   module NewThread : S
 
+  (**
+   Schedules work using Lwt.
+   *)
+  module Lwt : S
+
 end
 
 module Observable : sig
@@ -265,6 +270,8 @@ module Observable : sig
   module Immediate : Scheduled
 
   module NewThread : Scheduled
+
+  module Lwt : Scheduled
 
 end
 

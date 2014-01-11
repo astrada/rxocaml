@@ -396,3 +396,5 @@ module Immediate = MakeScheduled(RxScheduler.Immediate)
 
 module NewThread = MakeScheduled(RxScheduler.NewThread)
 
+module Lwt = MakeScheduled(RxScheduler.Lwt)
+

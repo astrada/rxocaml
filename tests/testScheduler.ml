@@ -225,6 +225,22 @@ let test_new_thread_cancel_action _ =
   (* Wait for the other thread *)
   Thread.delay 0.1
 
+let test_lwt_schedule_action _ =
+  let ran = ref false in
+  let _ = Rx.Scheduler.Lwt.schedule_absolute
+    (fun () ->
+      ran := true;
+      Rx.Subscription.empty
+    ) in
+  assert_bool "ran should be true" !ran
+
+let test_lwt_cancel_action _ =
+  let unsubscribe = Rx.Scheduler.Lwt.schedule_absolute
+    (fun () ->
+      assert_failure "This action should not run"
+    ) in
+  unsubscribe ()
+
 let suite = "Scheduler tests" >:::
   ["test_current_thread_schedule_action" >::
      test_current_thread_schedule_action;
@@ -249,5 +265,7 @@ let suite = "Scheduler tests" >:::
      test_immediate_schedule_nested_actions;
    "test_new_thread_schedule_action" >:: test_new_thread_schedule_action;
    "test_new_thread_cancel_action" >:: test_new_thread_cancel_action;
+   "test_lwt_schedule_action" >:: test_lwt_schedule_action;
+   "test_lwt_cancel_action" >:: test_lwt_cancel_action;
   ]
 

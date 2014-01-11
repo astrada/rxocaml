@@ -33,3 +33,5 @@ module Immediate : S
 
 module NewThread : S
 
+module Lwt : S
+

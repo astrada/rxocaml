@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: a24e70445ebbfd470a4dfb71afc18d3b)
+# DO NOT EDIT (digest: ce1d5ce0b06adee069db91d515b9138f)
 version = "0.1"
 description = "Reactive Extensions (Rx) library"
-requires = "lwt batteries threads"
+requires = "threads batteries lwt lwt.unix"
 archive(byte) = "rxocaml.cma"
 archive(byte, plugin) = "rxocaml.cma"
 archive(native) = "rxocaml.cmxa"

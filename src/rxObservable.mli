@@ -58,3 +58,5 @@ module Immediate : Scheduled
 
 module NewThread : Scheduled
 
+module Lwt : Scheduled
+

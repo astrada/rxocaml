@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 34b69e347a815303857eb113d50287e2)
+# DO NOT EDIT (digest: 7846bd8d47c6e34e879c17d1eec24ff2)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -15,18 +15,21 @@
 "_darcs": not_hygienic
 # Library rxocaml
 "src/rxocaml.cmxs": use_rxocaml
-<src/*.ml{,i}>: package(lwt)
-<src/*.ml{,i}>: package(batteries)
 <src/*.ml{,i}>: package(threads)
+<src/*.ml{,i}>: package(batteries)
+<src/*.ml{,i}>: package(lwt)
+<src/*.ml{,i}>: package(lwt.unix)
 # Executable test_suite
 "tests/testSuite.byte": use_rxocaml
 "tests/testSuite.byte": package(oUnit)
-"tests/testSuite.byte": package(lwt)
-"tests/testSuite.byte": package(batteries)
 "tests/testSuite.byte": package(threads)
+"tests/testSuite.byte": package(batteries)
+"tests/testSuite.byte": package(lwt)
+"tests/testSuite.byte": package(lwt.unix)
 <tests/*.ml{,i}>: use_rxocaml
 <tests/*.ml{,i}>: package(oUnit)
-<tests/*.ml{,i}>: package(lwt)
-<tests/*.ml{,i}>: package(batteries)
 <tests/*.ml{,i}>: package(threads)
+<tests/*.ml{,i}>: package(batteries)
+<tests/*.ml{,i}>: package(lwt)
+<tests/*.ml{,i}>: package(lwt.unix)
 # OASIS_STOP

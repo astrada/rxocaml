@@ -29,7 +29,7 @@ Library "rxocaml"
   Path: src
   Modules:
     Rx
-  BuildDepends: lwt, batteries, threads
+  BuildDepends: threads, batteries, lwt, lwt.unix
   XMETADescription: Reactive Extensions (Rx) library
 
 # Documentation

@@ -71,10 +71,10 @@ module DiscardableAction = struct
     unsubscribe: RxCore.subscription;
   }
 
-  let create action =
+  let create_state () =
     let state = RxAtomicData.create {
       ready = true;
-      unsubscribe = (fun () -> ());
+      unsubscribe = RxSubscription.empty;
     } in
     RxAtomicData.update
       (fun s ->
@@ -82,22 +82,42 @@ module DiscardableAction = struct
           unsubscribe =
             (fun () ->
               RxAtomicData.update (fun s' -> { s' with ready = false }) state)
-        }) state;
+        }
+      ) state;
+    state
+
+  let was_ready state =
+    let old_state =
+      RxAtomicData.update_if
+        (fun s -> s.ready = true)
+        (fun s -> { s with ready = false })
+        state
+    in
+    old_state.ready
+
+  let create action =
+    let state = create_state () in
     ((fun () ->
-      let was_ready =
-        let old_state =
-          RxAtomicData.update_if
-            (fun s -> s.ready = true)
-            (fun s -> { s with ready = false })
-            state
-        in
-        old_state.ready
-      in
-      if was_ready then begin
+      if was_ready state then begin
         let unsubscribe = action () in
         RxAtomicData.update
           (fun s -> { s with unsubscribe = unsubscribe }) state
       end), (RxAtomicData.unsafe_get state).unsubscribe)
+
+  let create_lwt action =
+    let state = create_state () in
+    let was_ready_thread = Lwt.wrap (fun () -> was_ready state) in
+    ((Lwt.bind was_ready_thread
+     (fun was_ready ->
+       if was_ready then begin
+         Lwt.bind action
+           (fun unsubscribe ->
+             RxAtomicData.update
+               (fun s -> { s with unsubscribe = unsubscribe }) state;
+             Lwt.return_unit
+           )
+       end else Lwt.return_unit
+     )), (RxAtomicData.unsafe_get state).unsubscribe)
 
 end
 
@@ -221,9 +241,6 @@ end
 module Immediate = MakeScheduler(ImmediateBase)
 
 module NewThreadBase = struct
-  (* Implementation based on:
-   * /usr/local/src/RxJava/rxjava-core/src/main/java/rx/schedulers/ImmediateScheduler.java
-   *)
   type t = unit
 
   let now () = Unix.gettimeofday ()
@@ -240,4 +257,37 @@ module NewThreadBase = struct
 end
 
 module NewThread = MakeScheduler(NewThreadBase)
+
+module LwtBase = struct
+  type t = unit
+
+  let now () = Unix.gettimeofday ()
+
+  let create_sleeping_action action exec_time =
+    let delay_action =
+      if exec_time > now () then begin
+        let delay = exec_time -. (now ()) in
+        if delay > 0.0 then Lwt_unix.sleep delay else Lwt.return_unit
+      end else Lwt.return_unit in
+    Lwt.bind delay_action (fun () -> Lwt.wrap action)
+
+  let schedule_absolute ?due_time action =
+    let (exec_time, action') =
+      match due_time with
+      | None -> (now (), Lwt.wrap action)
+      | Some dt -> (dt, create_sleeping_action action dt) in
+    let (discardable_action, unsubscribe) =
+      DiscardableAction.create_lwt action' in
+    let (waiter, wakener) = Lwt.task () in
+    let lwt_unsubscribe = RxSubscription.from_task waiter in
+    let _ = Lwt.bind waiter (fun () -> discardable_action) in
+    let () = Lwt.wakeup_later wakener () in
+    (fun () ->
+      lwt_unsubscribe ();
+      unsubscribe ();
+    )
+
+end
+
+module Lwt = MakeScheduler(LwtBase)
 
