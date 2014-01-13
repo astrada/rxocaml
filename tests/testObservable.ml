@@ -175,7 +175,7 @@ let test_to_enum _ =
       on_completed ();
       Rx.Subscription.empty;
     ) in
-  let enum = Rx.Observable.to_enum observable in
+  let enum = Rx.Observable.Blocking.to_enum observable in
   let xs = BatList.of_enum enum in
   assert_equal [1; 2; 3; 4] xs
 
@@ -191,7 +191,7 @@ let test_to_enum_error _ =
       Rx.Subscription.empty;
     ) in
   try
-    let enum = Rx.Observable.to_enum observable in
+    let enum = Rx.Observable.Blocking.to_enum observable in
     let _ = BatList.of_enum enum in
     assert_failure "Should raise an exception"
   with e ->

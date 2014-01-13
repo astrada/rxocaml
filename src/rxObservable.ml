@@ -64,36 +64,6 @@ let dematerialize observable =
       observable materialize_observer
     )
 
-let to_enum observable =
-  (* Implementation based on:
-   * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationToIterator.java
-   *)
-  let condition = Condition.create () in
-  let mutex = Mutex.create () in
-  let queue = Queue.create () in
-  let observer =
-    RxObserver.create
-      ~on_completed:ignore
-      ~on_error:ignore
-      (fun n ->
-        BatMutex.synchronize ~lock:mutex
-          (fun () ->
-            Queue.add n queue;
-            Condition.signal condition) ()) in
-  let _ = materialize observable observer in
-  BatEnum.from
-    (fun () ->
-      BatMutex.synchronize ~lock:mutex
-        (fun () ->
-          if Queue.is_empty queue then Condition.wait condition mutex;
-          let n = Queue.take queue in
-          match n with
-          | RxCore.OnCompleted -> raise BatEnum.No_more_elements
-          | RxCore.OnError e -> raise e
-          | RxCore.OnNext v -> v
-        ) ()
-    )
-
 let length observable =
   (* Implementation based on:
    * https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Linq/Reactive/Linq/Observable/Count.cs
@@ -338,6 +308,36 @@ module Blocking = struct
 (* Implementation based on:
  * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/observables/BlockingObservable.java
  *)
+
+  let to_enum observable =
+    (* Implementation based on:
+     * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationToIterator.java
+     *)
+    let condition = Condition.create () in
+    let mutex = Mutex.create () in
+    let queue = Queue.create () in
+    let observer =
+      RxObserver.create
+        ~on_completed:ignore
+        ~on_error:ignore
+        (fun n ->
+          BatMutex.synchronize ~lock:mutex
+            (fun () ->
+              Queue.add n queue;
+              Condition.signal condition) ()) in
+    let _ = materialize observable observer in
+    BatEnum.from
+      (fun () ->
+        BatMutex.synchronize ~lock:mutex
+          (fun () ->
+            if Queue.is_empty queue then Condition.wait condition mutex;
+            let n = Queue.take queue in
+            match n with
+            | RxCore.OnCompleted -> raise BatEnum.No_more_elements
+            | RxCore.OnError e -> raise e
+            | RxCore.OnNext v -> v
+          ) ()
+      )
 
   let single observable =
     let enum = single observable |> to_enum in

@@ -14,8 +14,6 @@ val materialize :
 val dematerialize :
   'a RxCore.notification RxCore.observable -> 'a RxCore.observable
 
-val to_enum : 'a RxCore.observable -> 'a BatEnum.t
-
 val length : 'a RxCore.observable -> int RxCore.observable
 
 val drop : int -> 'a RxCore.observable -> 'a RxCore.observable
@@ -38,6 +36,8 @@ val bind :
   'b RxCore.observable
 
 module Blocking : sig
+  val to_enum : 'a RxCore.observable -> 'a BatEnum.t
+
   val single : 'a RxCore.observable -> 'a
 
 end
