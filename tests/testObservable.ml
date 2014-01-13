@@ -1,9 +1,9 @@
 open OUnit2
 
-let test_from_enum _ =
+let test_of_enum _ =
   let items = ["one"; "two"; "three"] in
   let observable =
-    Rx.Observable.CurrentThread.from_enum @@ BatList.enum items in
+    Rx.Observable.CurrentThread.of_enum @@ BatList.enum items in
   let (observer, state) = TestHelper.Observer.create () in
   let _ = observable observer in
   assert_equal items @@ TestHelper.Observer.on_next_values state;
@@ -261,21 +261,21 @@ let test_single_blocking_empty _ =
   with e ->
     assert_equal (Failure "Sequence contains no elements") e
 
-let test_from_list _ =
+let test_of_list _ =
   let items = ["one"; "two"; "three"] in
-  let from_list xs =
-    Rx.Observable.CurrentThread.from_enum @@ BatList.enum xs in
+  let of_list xs =
+    Rx.Observable.CurrentThread.of_enum @@ BatList.enum xs in
   assert_equal 3
     Rx.Observable.(
-      items |> from_list |> length |> Blocking.single
+      items |> of_list |> length |> Blocking.single
     );
   assert_equal "two"
     Rx.Observable.(
-      items |> from_list |> drop 1 |> take 1 |> Blocking.single
+      items |> of_list |> drop 1 |> take 1 |> Blocking.single
     );
   assert_equal "three"
     Rx.Observable.(
-      items |> from_list |> take_last 1 |> Blocking.single
+      items |> of_list |> take_last 1 |> Blocking.single
     )
 
 let test_append _ =
@@ -510,7 +510,7 @@ let test_subscribe_on_this _ =
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
 let suite = "Observable tests" >:::
-  ["test_from_enum" >:: test_from_enum;
+  ["test_of_enum" >:: test_of_enum;
    "test_count" >:: test_count;
    "test_drop" >:: test_drop;
    "test_take" >:: test_take;
@@ -526,7 +526,7 @@ let suite = "Observable tests" >:::
    "test_single_empty" >:: test_single_empty;
    "test_single_blocking" >:: test_single_blocking;
    "test_single_blocking_empty" >:: test_single_blocking_empty;
-   "test_from_list" >:: test_from_list;
+   "test_of_list" >:: test_of_list;
    "test_append" >:: test_append;
    "test_append_error" >:: test_append_error;
    "test_map" >:: test_map;

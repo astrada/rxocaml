@@ -45,7 +45,7 @@ end
 module type Scheduled = sig
   val subscribe_on_this : 'a RxCore.observable -> 'a RxCore.observable
 
-  val from_enum : 'a BatEnum.t -> 'a RxCore.observable
+  val of_enum : 'a BatEnum.t -> 'a RxCore.observable
 
 end
 

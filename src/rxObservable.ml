@@ -348,7 +348,7 @@ end
 module type Scheduled = sig
   val subscribe_on_this : 'a RxCore.observable -> 'a RxCore.observable
 
-  val from_enum : 'a BatEnum.t -> 'a RxCore.observable
+  val of_enum : 'a BatEnum.t -> 'a RxCore.observable
 
 end
 
@@ -369,7 +369,7 @@ module MakeScheduled(Scheduler : RxScheduler.S) = struct
         )
     )
 
-  let from_enum enum =
+  let of_enum enum =
     (fun (on_completed, on_error, on_next) ->
       Scheduler.schedule_recursive
         (fun self ->
