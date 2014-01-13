@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 7846bd8d47c6e34e879c17d1eec24ff2)
+# DO NOT EDIT (digest: 17228f3206cbf0d0ae7ef5e1b7881218)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -32,4 +32,15 @@
 <tests/*.ml{,i}>: package(batteries)
 <tests/*.ml{,i}>: package(lwt)
 <tests/*.ml{,i}>: package(lwt.unix)
+# Executable hello
+"examples/hello/hello.byte": use_rxocaml
+"examples/hello/hello.byte": package(threads)
+"examples/hello/hello.byte": package(batteries)
+"examples/hello/hello.byte": package(lwt)
+"examples/hello/hello.byte": package(lwt.unix)
+<examples/hello/*.ml{,i}>: use_rxocaml
+<examples/hello/*.ml{,i}>: package(threads)
+<examples/hello/*.ml{,i}>: package(batteries)
+<examples/hello/*.ml{,i}>: package(lwt)
+<examples/hello/*.ml{,i}>: package(lwt.unix)
 # OASIS_STOP

@@ -24,6 +24,11 @@ Flag all
   Description: Build all
   Default: false
 
+# Flags
+Flag examples
+  Description: Build examples
+  Default$: flag(all)
+
 # Libraries
 Library "rxocaml"
   Path: src
@@ -55,6 +60,14 @@ Test core
   Run$: flag(tests) || flag(all)
   Command: $test_suite
   TestTools: test_suite
+
+# Examples
+Executable "hello"
+  Build$: flag(examples) || flag(all)
+  Path: examples/hello
+  Install: false
+  MainIs: hello.ml
+  BuildDepends: rxocaml
 
 # VCS
 SourceRepository head
