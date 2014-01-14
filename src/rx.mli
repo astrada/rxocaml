@@ -232,6 +232,10 @@ module Scheduler : sig
       ((unit -> RxCore.subscription) -> RxCore.subscription) ->
       RxCore.subscription
 
+    val schedule_periodically :
+      ?initial_delay:float -> float -> (unit -> RxCore.subscription) ->
+      RxCore.subscription
+
   end
 
   (** Builds a scheduler from its core function implementation. *)

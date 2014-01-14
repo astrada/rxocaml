@@ -26,6 +26,10 @@ module type S = sig
     ((unit -> RxCore.subscription) -> RxCore.subscription) ->
     RxCore.subscription
 
+  val schedule_periodically :
+    ?initial_delay:float -> float -> (unit -> RxCore.subscription) ->
+    RxCore.subscription
+
 end
 
 module MakeScheduler(BaseScheduler : Base) = struct
@@ -54,6 +58,30 @@ module MakeScheduler(BaseScheduler : Base) = struct
     in
     Composite.add parent_state scheduled_subscription;
     parent_subscription
+
+  let schedule_periodically ?initial_delay period action =
+    let completed = RxAtomicData.create false in
+    let rec loop () =
+      if not (RxAtomicData.unsafe_get completed) then begin
+        let started_at = BaseScheduler.now () in
+        let unsubscribe1 = action () in
+        let time_taken = (now ()) -. started_at in
+        let delay = period -. time_taken in
+        let unsubscribe2 = schedule_relative delay loop in
+        RxSubscription.create (
+          fun () ->
+            unsubscribe1 ();
+            unsubscribe2 ();
+        )
+      end else RxSubscription.empty
+    in
+    let delay = BatOption.default 0. initial_delay in
+    let unsubscribe = schedule_relative delay loop in
+    RxSubscription.create (
+      fun () ->
+        RxAtomicData.set true completed;
+        unsubscribe ()
+    )
 
 end
 

@@ -491,6 +491,7 @@ let test_subscribe_on_this _ =
       Rx.Scheduler.Immediate.schedule_absolute ?due_time action
     let schedule_relative _ _ = Rx.Subscription.empty
     let schedule_recursive _ = Rx.Subscription.empty
+    let schedule_periodically ?initial_delay _ _ = Rx.Subscription.empty
   end in
   let module ScheduledObservable = Rx.Observable.MakeScheduled(Scheduler) in
   let observable =

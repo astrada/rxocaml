@@ -241,6 +241,18 @@ let test_lwt_cancel_action _ =
     ) in
   unsubscribe ()
 
+let test_lwt_schedule_periodically _ =
+  let counter = ref 0 in
+  let unsubscribe = Rx.Scheduler.Lwt.schedule_periodically 0.1
+    (fun () ->
+      incr counter;
+      Rx.Subscription.empty
+    ) in
+  let sleep = Lwt_unix.sleep 0.15 in
+  let () = Lwt_main.run sleep in
+  unsubscribe ();
+  assert_equal ~printer:string_of_int 2 !counter
+
 let suite = "Scheduler tests" >:::
   ["test_current_thread_schedule_action" >::
      test_current_thread_schedule_action;
@@ -267,5 +279,6 @@ let suite = "Scheduler tests" >:::
    "test_new_thread_cancel_action" >:: test_new_thread_cancel_action;
    "test_lwt_schedule_action" >:: test_lwt_schedule_action;
    "test_lwt_cancel_action" >:: test_lwt_cancel_action;
+   "test_lwt_schedule_periodically" >:: test_lwt_schedule_periodically;
   ]
 
