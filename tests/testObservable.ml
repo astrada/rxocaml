@@ -510,6 +510,16 @@ let test_subscribe_on_this _ =
   assert_equal true @@ TestHelper.Observer.is_completed state;
   assert_equal false @@ TestHelper.Observer.is_on_error state
 
+let test_with_test_scheduler _ =
+  let (observer, state) = TestHelper.Observer.create () in
+  let interval = Rx.Observable.Test.interval 1.0 in
+  let observable = Rx.Observable.take 5 interval in
+  let _ = observable observer in
+  Rx.Scheduler.Test.advance_time_to 5.0;
+  assert_equal [0;1;2;3;4] @@ TestHelper.Observer.on_next_values state;
+  assert_equal true @@ TestHelper.Observer.is_completed state;
+  assert_equal false @@ TestHelper.Observer.is_on_error state
+
 let suite = "Observable tests" >:::
   ["test_of_enum" >:: test_of_enum;
    "test_count" >:: test_count;
@@ -542,5 +552,6 @@ let suite = "Observable tests" >:::
    "test_error" >:: test_error;
    "test_never" >:: test_never;
    "test_subscribe_on_this" >:: test_subscribe_on_this;
+   "test_with_test_scheduler" >:: test_with_test_scheduler;
   ]
 

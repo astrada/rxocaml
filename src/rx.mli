@@ -264,6 +264,42 @@ module Scheduler : sig
    *)
   module Lwt : S
 
+  (**
+   Virtual time scheduler used for testing applications and libraries built
+   using Reactive Extensions.
+   *)
+  module Test : sig
+    include S
+
+    (** Current timestamp in seconds. *)
+    val now : unit -> float
+
+    (**
+     [trigger_actions target_time] triggers all scheduled actions until
+     [target_time] seconds.
+     *)
+    val trigger_actions : float -> unit
+
+    (**
+     [trigger_actions_until_now ()] triggers all scheduled actions until
+     [now].
+     *)
+    val trigger_actions_until_now : unit -> unit
+
+    (**
+     [advance_time_to target_time] sets the current timestamp to [target_time]
+     and triggers all actions until that time.
+     *)
+    val advance_time_to : float -> unit
+
+    (**
+     [advance_time_by dealy] advances the current timestamp by [delay] seconds
+     and triggers all actions until that time.
+     *)
+    val advance_time_by : float -> unit
+
+  end
+
 end
 
 (** Observable combinators. *)
@@ -476,6 +512,16 @@ module Observable : sig
      *)
     val of_enum : 'a BatEnum.t -> 'a RxCore.observable
 
+    (**
+     Returns an observable that emits an item each time interval, containing
+     a sequential number.
+
+     @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/interval.png>
+     @see <https://github.com/Netflix/RxJava/wiki/Creating-Observables#interval> RxJava Wiki: interval()
+     @see <http://msdn.microsoft.com/en-us/library/hh229027.aspx> MSDN: Observable.Interval
+     *)
+    val interval : float -> int RxCore.observable
+
   end
 
   (** Provides combinators on a specific scheduler. *)
@@ -493,6 +539,9 @@ module Observable : sig
 
   (** Provides combinators on the Lwt scheduler. *)
   module Lwt : Scheduled
+
+  (** Provides combinators on the test scheduler. *)
+  module Test : Scheduled
 
 end
 

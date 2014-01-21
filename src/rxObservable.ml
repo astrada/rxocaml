@@ -350,6 +350,8 @@ module type Scheduled = sig
 
   val of_enum : 'a BatEnum.t -> 'a RxCore.observable
 
+  val interval : float -> int RxCore.observable
+
 end
 
 module MakeScheduled(Scheduler : RxScheduler.S) = struct
@@ -388,6 +390,20 @@ module MakeScheduled(Scheduler : RxScheduler.S) = struct
         )
     )
 
+  let interval period =
+    (* Implementation based on:
+     * https://github.com/Netflix/RxJava/blob/master/rxjava-core/src/main/java/rx/operators/OperationInterval.java
+     *)
+    (fun (on_completed, on_error, on_next) ->
+      let counter = RxAtomicData.create 0 in
+      Scheduler.schedule_periodically ~initial_delay:period period
+        (fun () ->
+          on_next (RxAtomicData.unsafe_get counter);
+          RxAtomicData.update succ counter;
+          RxSubscription.empty
+        )
+    )
+
 end
 
 module CurrentThread = MakeScheduled(RxScheduler.CurrentThread)
@@ -397,4 +413,6 @@ module Immediate = MakeScheduled(RxScheduler.Immediate)
 module NewThread = MakeScheduled(RxScheduler.NewThread)
 
 module Lwt = MakeScheduled(RxScheduler.Lwt)
+
+module Test = MakeScheduled(RxScheduler.Test)
 

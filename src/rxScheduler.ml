@@ -319,3 +319,80 @@ end
 
 module Lwt = MakeScheduler(LwtBase)
 
+module TestBase = struct
+  (* Implementation based on:
+   * /usr/local/src/RxJava/rxjava-core/src/main/java/rx/schedulers/TestScheduler.java
+   *)
+
+  type t = {
+    mutable queue: TimedActionPriorityQueue.t;
+    mutable time: float;
+  }
+
+  let current_state = {
+    queue = TimedActionPriorityQueue.empty;
+    time = 0.0;
+  }
+
+  let now () = current_state.time
+
+  let schedule_absolute ?due_time action =
+    let exec_time =
+      match due_time with
+      | None -> now ()
+      | Some dt -> dt in
+    let (discardable_action, unsubscribe) =
+      DiscardableAction.create action in
+    let queue = TimedActionPriorityQueue.insert current_state.queue {
+      TimedAction.discardable_action;
+      exec_time;
+      count = 0;
+    } in
+    current_state.queue <- queue;
+    unsubscribe
+
+  let trigger_actions target_time =
+    let rec loop () =
+      try
+        let timed_action =
+          TimedActionPriorityQueue.find_min current_state.queue in
+        if timed_action.TimedAction.exec_time <= target_time then begin
+          let queue =
+            TimedActionPriorityQueue.del_min current_state.queue in
+          current_state.time <- timed_action.TimedAction.exec_time;
+          current_state.queue <- queue;
+          timed_action.TimedAction.discardable_action ();
+          loop ()
+        end
+      with Invalid_argument "find_min" -> ()
+    in
+    loop ()
+
+  let trigger_actions_until_now () =
+    trigger_actions current_state.time
+
+  let advance_time_to delay =
+    current_state.time <- delay;
+    trigger_actions delay
+
+  let advance_time_by delay =
+    let target_time = current_state.time +. delay in
+    trigger_actions target_time
+
+end
+
+module Test = struct
+  include MakeScheduler(TestBase)
+
+  let now = TestBase.now
+
+  let trigger_actions = TestBase.trigger_actions
+
+  let trigger_actions_until_now = TestBase.trigger_actions_until_now
+
+  let advance_time_to = TestBase.advance_time_to
+
+  let advance_time_by = TestBase.advance_time_by
+
+end
+

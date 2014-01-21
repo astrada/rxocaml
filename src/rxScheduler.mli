@@ -39,3 +39,18 @@ module NewThread : S
 
 module Lwt : S
 
+module Test : sig
+  include S
+
+  val now : unit -> float
+
+  val trigger_actions : float -> unit
+
+  val trigger_actions_until_now : unit -> unit
+
+  val advance_time_to : float -> unit
+
+  val advance_time_by : float -> unit
+
+end
+

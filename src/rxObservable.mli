@@ -47,6 +47,8 @@ module type Scheduled = sig
 
   val of_enum : 'a BatEnum.t -> 'a RxCore.observable
 
+  val interval : float -> int RxCore.observable
+
 end
 
 module MakeScheduled :
@@ -59,4 +61,6 @@ module Immediate : Scheduled
 module NewThread : Scheduled
 
 module Lwt : Scheduled
+
+module Test : Scheduled
 
