@@ -9,6 +9,8 @@ type 'a notification =
   | OnError of exn
   | OnNext of 'a
 
+type 'a subject = 'a observer * 'a observable
+
 module type MutableData = sig
 
   type 'a t

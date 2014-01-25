@@ -545,3 +545,137 @@ module Observable : sig
 
 end
 
+(** Provides a set of functions for creating subjects. *)
+module Subject : sig
+
+  (**
+   Creates a subject that broadcasts each notification to all subscribed
+   observers.
+   *)
+  val create : unit -> 'a RxCore.subject * RxCore.subscription
+
+  (**
+   Subject that retains all events and will replay them to an observer that
+   subscribes.
+
+   Example usage:
+   {[
+     let (subject, unsubscribe) = Rx.Subject.Replay.create () in
+     let ((on_completed, _, on_next), observable) = subject in
+     on_next "one";
+     on_next "two";
+     on_next "three";
+     on_completed ();
+
+     (* both of the following will get the on_next/on_completed calls from
+      * above *)
+     let _ = observable observer1 in
+     let _ = observable observer2 in
+   ]}
+
+   @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/S.ReplaySubject.png> RxJava ReplaySubject
+   *)
+  module Replay : sig
+
+    (**
+     Creates a subject that broadcasts each notification to all subscribed
+     and future observers.
+     *)
+    val create : unit -> 'a RxCore.subject * RxCore.subscription
+
+  end
+
+  (**
+   Subject that publishes the most recent and all subsequent events to each
+   subscribed observer.
+
+   Example usage:
+   {[
+     (* observer will receive all events. *)
+     let (subject, unsubscribe) = Rx.Subject.Behavior.create "default" in
+     let ((_, _, on_next), observable) = subject in
+     let _ = observable observer in
+     on_next "one";
+     on_next "two";
+     on_next "three";
+     
+     (* observer will receive the "one", "two" and "three" events, but not
+      * "zero" *)
+     let (subject, unsubscribe) = Rx.Subject.Behavior.create "default" in
+     let ((_, _, on_next), observable) = subject in
+     on_next "zero";
+     on_next "one";
+     let _ = observable observer in
+     on_next "two";
+     on_next "three";
+     
+     (* observer will receive only on_completed *)
+     let (subject, unsubscribe) = Rx.Subject.Behavior.create "default" in
+     let ((on_completed, _, on_next), observable) = subject in
+     on_next "zero";
+     on_next "one";
+     on_completed ();
+     let _ = observable observer in
+     
+     (* observer will receive only on_error *)
+     let (subject, unsubscribe) = Rx.Subject.Behavior.create "default" in
+     let ((_, on_error, on_next), observable) = subject in
+     on_next "zero";
+     on_next "one";
+     on_error (Failure "error");
+     let _ = observable observer in
+   ]}
+
+   @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/S.BehaviorSubject.png> RxJava BehaviorSubject
+   *)
+  module Behavior : sig
+
+    (**
+      Creates a value that changes over time. Observers can subscribe to the
+      subject to receive the last (or initial) value and all subsequent
+      notifications.
+     *)
+    val create : 'a -> 'a RxCore.subject * RxCore.subscription
+
+  end
+
+  (**
+   Subject that publishes only the last event to each observer that has
+   subscribed when the sequence completes.
+
+   Example usage:
+   {[
+     (* observer will receive no onNext events because the on_completed isn't
+      * called. *)
+     let (subject, unsubscribe) = Rx.Subject.Async.create () in
+     let ((_, _, on_next), observable) = subject in
+     let _ = observable observer in
+     on_next "one";
+     on_next "two";
+     on_next "three";
+     
+     (* observer will receive "three" as the only on_next event. *)
+     let (subject, unsubscribe) = Rx.Subject.Async.create () in
+     let ((_, _, on_next), observable) = subject in
+     let _ = observable observer in
+     on_next "one";
+     on_next "two";
+     on_next "three";
+     on_completed ();
+   }]
+
+   @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/S.AsyncSubject.png> RxJava AsyncSubject
+   *)
+  module Async : sig
+
+    (**
+      Creates a value that represents the result of an asynchronous operation.
+      The last value before the on_completed notification, or the error
+      received through on_error, is sent to all subscribed observers.
+     *)
+    val create : unit -> 'a RxCore.subject * RxCore.subscription
+
+  end
+
+end
+

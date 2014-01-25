@@ -72,10 +72,20 @@ type subscription =
 type +'a observable =
   (* subscribe: *) 'a observer -> subscription
 
+(** Represents a notification to an observer. *)
 type 'a notification =
   | OnCompleted
+  (** Represents an [on_completed] notification to an observer. *)
   | OnError of exn
+  (** Represents an [on_error] notification to an observer. *)
   | OnNext of 'a
+  (** Represents an [on_next] notification to an observer. *)
+
+(**
+ Represents both an observable sequence as well as an observer. Each
+ notification is broadcasted to all subscribed observers.
+ *)
+type 'a subject = 'a observer * 'a observable
 
 module type MutableData = sig
 

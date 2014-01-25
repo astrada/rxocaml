@@ -7,6 +7,7 @@ let tests =
    TestScheduler.suite;
    TestObservable.suite;
    TestAtomicData.suite;
+   TestSubject.suite;
   ]
 
 let build_suite () =
