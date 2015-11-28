@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: 17228f3206cbf0d0ae7ef5e1b7881218)
+# DO NOT EDIT (digest: 5a444952715f7ed37ad0f0516fd84002)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
+true: annot, bin_annot
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
 ".bzr": -traverse
@@ -15,32 +16,32 @@
 "_darcs": not_hygienic
 # Library rxocaml
 "src/rxocaml.cmxs": use_rxocaml
-<src/*.ml{,i}>: package(threads)
-<src/*.ml{,i}>: package(batteries)
-<src/*.ml{,i}>: package(lwt)
-<src/*.ml{,i}>: package(lwt.unix)
+<src/*.ml{,i,y}>: package(batteries)
+<src/*.ml{,i,y}>: package(lwt)
+<src/*.ml{,i,y}>: package(lwt.unix)
+<src/*.ml{,i,y}>: package(threads)
 # Executable test_suite
-"tests/testSuite.byte": use_rxocaml
-"tests/testSuite.byte": package(oUnit)
-"tests/testSuite.byte": package(threads)
 "tests/testSuite.byte": package(batteries)
 "tests/testSuite.byte": package(lwt)
 "tests/testSuite.byte": package(lwt.unix)
-<tests/*.ml{,i}>: use_rxocaml
-<tests/*.ml{,i}>: package(oUnit)
-<tests/*.ml{,i}>: package(threads)
-<tests/*.ml{,i}>: package(batteries)
-<tests/*.ml{,i}>: package(lwt)
-<tests/*.ml{,i}>: package(lwt.unix)
+"tests/testSuite.byte": package(oUnit)
+"tests/testSuite.byte": package(threads)
+"tests/testSuite.byte": use_rxocaml
+<tests/*.ml{,i,y}>: package(batteries)
+<tests/*.ml{,i,y}>: package(lwt)
+<tests/*.ml{,i,y}>: package(lwt.unix)
+<tests/*.ml{,i,y}>: package(oUnit)
+<tests/*.ml{,i,y}>: package(threads)
+<tests/*.ml{,i,y}>: use_rxocaml
 # Executable hello
-"examples/hello/hello.byte": use_rxocaml
-"examples/hello/hello.byte": package(threads)
 "examples/hello/hello.byte": package(batteries)
 "examples/hello/hello.byte": package(lwt)
 "examples/hello/hello.byte": package(lwt.unix)
-<examples/hello/*.ml{,i}>: use_rxocaml
-<examples/hello/*.ml{,i}>: package(threads)
-<examples/hello/*.ml{,i}>: package(batteries)
-<examples/hello/*.ml{,i}>: package(lwt)
-<examples/hello/*.ml{,i}>: package(lwt.unix)
+"examples/hello/hello.byte": package(threads)
+"examples/hello/hello.byte": use_rxocaml
+<examples/hello/*.ml{,i,y}>: package(batteries)
+<examples/hello/*.ml{,i,y}>: package(lwt)
+<examples/hello/*.ml{,i,y}>: package(lwt.unix)
+<examples/hello/*.ml{,i,y}>: package(threads)
+<examples/hello/*.ml{,i,y}>: use_rxocaml
 # OASIS_STOP

@@ -408,7 +408,7 @@ module Observable : sig
    observable containing that item. If it emits more than one item or no
    item, raise a [Failure] exception.
 
-   @see https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/single.png> Marble diagram
+   @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/single.png> Marble diagram
    
    @see <https://github.com/Netflix/RxJava/wiki/Observable-Utility-Operators#single-and-singleordefault> RxJava Wiki: single()
    @see <https://rx.codeplex.com/SourceControl/latest#Rx.NET/Source/System.Reactive.Linq/Reactive/Linq/Observable/SingleAsync.cs> SingleAsync.cs
@@ -516,7 +516,7 @@ module Observable : sig
      Returns an observable that emits an item each time interval, containing
      a sequential number.
 
-     @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/interval.png>
+     @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/interval.png> Marble diagram
      @see <https://github.com/Netflix/RxJava/wiki/Creating-Observables#interval> RxJava Wiki: interval()
      @see <http://msdn.microsoft.com/en-us/library/hh229027.aspx> MSDN: Observable.Interval
      *)
@@ -662,7 +662,7 @@ module Subject : sig
      on_next "two";
      on_next "three";
      on_completed ();
-   }]
+   ]}
 
    @see <https://raw.github.com/wiki/Netflix/RxJava/images/rx-operators/S.AsyncSubject.png> RxJava AsyncSubject
    *)
