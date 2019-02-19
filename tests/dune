@@ -1,0 +1,9 @@
+
+(executable
+  (name testSuite)
+  (flags :standard -warn-error -27-52)
+  (libraries oUnit batteries rx))
+
+(alias
+  (name runtest)
+  (action (run ./testSuite.exe)))
