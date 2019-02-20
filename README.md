@@ -3,7 +3,7 @@ RxOcaml: Reactive Extensions in OCaml
 
 **RxOcaml** is a library for composing asynchronous and event-based programs
 using observable sequences. This library is an OCaml implementation of [Rx
-Observables](https://rx.codeplex.com/).
+Observables](http://reactivex.io/).
 
 Building rxocaml
 ------------------
@@ -21,41 +21,40 @@ The reccomended way to install this library is using
 
 You will need the following libraries:
 
-* [OCaml](http://caml.inria.fr/ocaml/release.en.html) >= 4.01.0
-* [Findlib](http://projects.camlcity.org/projects/findlib.html/) >= 1.2.7
+* [OCaml](http://caml.inria.fr/ocaml/release.en.html) >= 4.02.0
+* [dune](https://dune.build/) >= 1.1.0
 * [Batteries](http://batteries.forge.ocamlcore.org/) >= 2.1.0
 * [Lwt](http://ocsigen.org/lwt/) >= 2.4.2
 * [OUnit](http://ounit.forge.ocamlcore.org/) >= 2.0.0 (to build and run the
   tests, optional)
+* [odoc](https://github.com/ocaml/odoc) >= 1.0.0 (to build the documentation,
+  optional)
 
 ### Configuration and installation
 
-To build the library, run
+To build the library, run:
 
-    $ ocaml setup.ml -configure
-    $ ocaml setup.ml -build
+    $ make
 
 To install the library, run (as root, if your user doesn't have enough
-privileges)
+privileges):
 
-    $ ocaml setup.ml -install
+    $ make install
 
-To build and run the tests, execute
+To build and run the tests, run:
 
-    $ ocaml setup.ml -configure --enable-tests
-    $ ocaml setup.ml -build
-    $ ocaml setup.ml -test
+    $ make test
 
-To generate the documentation, run
+To generate the documentation, run:
 
-    $ ocaml setup.ml -doc
+    $ make doc
 
 Then you can browse the HTML documentation starting from
-`rxocaml.docdir/index.html`, but is not installed by default.
+`_build/default/_doc/_html/`, but it's not installed by default.
 
-To uninstall anything that was previously installed, execute
+To uninstall anything that was previously installed, run:
 
-    $ ocaml setup.ml -uninstall
+    $ make uninstall
 
 ### Further information
 
