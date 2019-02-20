@@ -1,0 +1,5 @@
+
+(executable
+  (name hello)
+  (flags :standard -warn-error -27-52)
+  (libraries rx))

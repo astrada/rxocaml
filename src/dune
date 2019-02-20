@@ -1,0 +1,9 @@
+
+(library
+  (name rx)
+  (public_name rx)
+  (wrapped false)
+  (flags :standard -warn-error -27-52)
+  (libraries threads batteries lwt lwt.unix))
+
+

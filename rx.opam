@@ -1,0 +1,23 @@
+opam-version: "2.0"
+name: "rx"
+version: "2.5"
+author: "Alessandro Strada"
+maintainer: "Alessandro Strada <alessandro.strada@gmail.com>"
+synopsis: "An OCaml implementation of RX Observables."
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "@doc" "-p" name ] {with-doc}
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+depends: [
+  "dune" {build}
+  "base-unix"
+  "lwt"
+  "batteries"
+  "ocaml" { >= "4.02.0" }
+  "odoc" {with-doc}
+  "oUnit" {with-test}
+]
+homepage: "https://github.com/astrada/rxocaml"
+dev-repo: "git+https://github.com/astrada/rxocaml.git"
+bug-reports: "https://github.com/astrada/rxocaml/issues"
